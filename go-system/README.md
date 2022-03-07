@@ -29,6 +29,12 @@ Configuration file templates or default configs.
 
 Put your `confd` or `consul-template` template files here.
 
+## `/internal`
+
+Private application and library code. This is the code you don't want others importing in their applications or libraries. Note that this layout pattern is enforced by the Go compiler itself. See the Go 1.4 release notes for more details. Note that you are not limited to the top level internal directory. You can have more than one `internal` directory at any level of your project tree.
+
+You can optionally add a bit of extra structure to your internal packages to separate your shared and non-shared `internal` code. It's not required (especially for smaller projects), but it's nice to have visual clues showing the intended package use. Your actual application code can go in the `/internal/app` directory (e.g., `/internal/app/myapp`) and the code shared by those apps in the `/internal/pkg` directory (e.g., `/internal/pkg/myprivlib`).
+
 ## `/pkg`
 
 Library code that's ok to use by external applications (e.g., `/pkg/mypubliclib`). Other projects will import these libraries expecting them to work, so think twice before you put something here :-) Note that the `internal` directory is a better way to ensure your private packages are not importable because it's enforced by Go. The /pkg directory is still a good way to explicitly communicate that the code in that directory is safe for use by others. The I'll take pkg over internal blog post by Travis Jeffery provides a good overview of the `pkg` and `internal` directories and when it might make sense to use them.
