@@ -11,8 +11,7 @@ type NodeData struct {
 	Predecessors []int
 }
 
-type NodeMap struct {
-}
+type NodeMap map[int]NodeData
 
 type Message struct {
 	Id       int
@@ -20,14 +19,14 @@ type Message struct {
 	Receiver int
 	Type     MessageType
 	Content  string
-	MetaData string // may contain intented receiver
+	MetaData string // may contain intended receiver
 }
 
 type DataObject struct {
 	//the thing we store
-	Key         string `json: key`
-	Value       string `json: value` //base64
-	VectorClock []int  `json: context`
+	Key         string
+	Value       string //base64
+	VectorClock []int
 }
 
 const (
