@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"sort"
 	"sync"
 )
@@ -30,10 +32,10 @@ func handleMessage2(w http.ResponseWriter, r *http.Request) {
 
 // ==========START COORDINATOR FUNCTIONS==========
 
-func getResponsibleNodes(keyPos int, nodeMap NodeMap) [REPLICATION_FACTOR]NodeData {
+func (n *Node) getResponsibleNodes(keyPos int) [REPLICATION_FACTOR]NodeData {
 	posArr := []int{}
 
-	for pos, _ := range nodeMap {
+	for pos, _ := range n.NodeMap {
 		posArr = append(posArr, pos)
 	}
 
@@ -53,22 +55,27 @@ func getResponsibleNodes(keyPos int, nodeMap NodeMap) [REPLICATION_FACTOR]NodeDa
 
 	responsibleNodes := [REPLICATION_FACTOR]NodeData{}
 	for i := 0; i < REPLICATION_FACTOR; i++ {
-		responsibleNodes[i] = nodeMap[posArr[(firstNodePosIndex+i)%len(posArr)]]
+		responsibleNodes[i] = n.NodeMap[posArr[(firstNodePosIndex+i)%len(posArr)]]
 	}
 	return responsibleNodes
 }
 
-func (n *Node) sendWriteRequest(object DataObject, node NodeData, successCount int, mutex sync.Mutex) {
+func (n *Node) sendWriteRequest(object DataObject, node NodeData, successCount *int, mutex sync.Mutex) {
 	jsonData, _ := json.Marshal(object)
 	resp, err := http.Post(fmt.Sprintf("%s/write-request", node.Ip), "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
-		log.Fatal(err)
+		log.Println("Error: ", err)
+		return
 	}
 	// TODO: HANDLE FAILURE TIMEOUT SCENARIO WHEN DEALING WITH HINTED HANDOFF
 
-	fmt.Printf("write-request response: %v\n", resp)
+	// Retrieve response body
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	fmt.Println("Write request response body:", body)
+
 	mutex.Lock()
-	successCount++
+	*successCount++
 	mutex.Unlock()
 }
 
@@ -77,9 +84,10 @@ func (n *Node) sendWriteRequests(object DataObject, nodes [REPLICATION_FACTOR]No
 	successfulWriteCount := 0
 
 	for _, node := range nodes {
-		go n.sendWriteRequest(object, node, successfulWriteCount, coordWriteReqMutex)
+		go n.sendWriteRequest(object, node, &successfulWriteCount, coordWriteReqMutex)
 	}
 
+	// TODO: ADD CHANNEL HERE TO DETECT TIMEOUT
 	for {
 		coordWriteReqMutex.Lock()
 		if successfulWriteCount >= MIN_WRITE_SUCCESS {
@@ -89,13 +97,67 @@ func (n *Node) sendWriteRequests(object DataObject, nodes [REPLICATION_FACTOR]No
 	}
 }
 
+func (n *Node) sendReadRequest(key string, node NodeData, successCount *int, mutex sync.Mutex) {
+	// Add key to query params
+	base, _ := url.Parse(fmt.Sprintf("%s/read-request", node.Ip))
+	params := url.Values{}
+	params.Add("key", key)
+	fmt.Println(params)
+	base.RawQuery = params.Encode()
+
+	// Send read request to node
+	resp, err := http.Get(base.String())
+	if err != nil {
+		log.Println("Error: ", err)
+		return
+	}
+
+	// TODO: DECIDE ON SCHEMA FOR RESPONSE DATA
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	fmt.Println("Read request response body:", body)
+
+	// TODO: HANDLE FAILURE TIMEOUT SCENARIO
+
+	// TODO: SHOULD WE INCLUDE A FAILURE RESPONSE IN THE INTERNAL API SO THAT THE COORDINATOR CAN DIFFERENTIATE BETWEEN
+	// ERRORS WHILE PROCESSING VS FAILED NODES? will it actually make sense for the coordinator to retry when there are
+	// errors or should it immediately return an error to the client? note: this applies to both read and write requests
+
+	mutex.Lock()
+	*successCount++
+	mutex.Unlock()
+}
+
+func (n *Node) sendReadRequests(key string, nodes [REPLICATION_FACTOR]NodeData) {
+	var coordReadReqMutex sync.Mutex
+	successfulReadCount := 0
+
+	for _, node := range nodes {
+		go n.sendReadRequest(key, node, &successfulReadCount, coordReadReqMutex)
+	}
+
+	// TODO: ADD CHANNEL HERE TO DETECT TIMEOUT
+	for {
+		coordReadReqMutex.Lock()
+		if successfulReadCount >= MIN_READ_SUCCESS {
+			break
+		}
+		coordReadReqMutex.Unlock()
+	}
+}
+
 func (n *Node) handleUpdate(w http.ResponseWriter, r *http.Request) {
 	// Get object from body
 	var object DataObject
 	body, _ := ioutil.ReadAll(r.Body)
+	defer r.Body.Close()
+
 	err := json.Unmarshal(body, &object)
 	if err != nil {
-		log.Fatal("Error:", err)
+		log.Println("Error:", err)
+		// Send error response to client
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"result": "error: request body could not be parsed"})
 	}
 	fmt.Println(object)
 
@@ -104,7 +166,7 @@ func (n *Node) handleUpdate(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("Position: %d\n", pos)
 
 	// Get nodes that should store this object
-	responsibleNodes := getResponsibleNodes(pos, n.NodeMap)
+	responsibleNodes := n.getResponsibleNodes(pos)
 	fmt.Printf("Responsible nodes: %v\n", responsibleNodes)
 
 	// Send write requests
@@ -116,7 +178,32 @@ func (n *Node) handleUpdate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (n *Node) handleGet(w http.ResponseWriter, r *http.Request) {
+	// Get key from query parameters
+	query := r.URL.Query()
+	key, ok := query["key"] // key is of type []string but we should only be expecting 1 value
+	if !ok {
+		log.Printf("Error: Key is not specified")
+		// Send error response to client
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"result": "error: query key was not specified"})
+	}
+	fmt.Printf("%v\n", query)
 
+	// Get position of key on ring
+	pos := HashMD5(key[0])
+	fmt.Printf("Position: %d\n", pos)
+
+	// Get nodes that should store this object
+	responsibleNodes := n.getResponsibleNodes(pos)
+	fmt.Printf("Responsible nodes: %v\n", responsibleNodes)
+
+	// Send read requests
+	n.sendReadRequests(key[0], responsibleNodes)
+	fmt.Println("yes done sending requests")
+
+	// Send response to client
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"result": "ok"})
 }
 
 // ==========END COORDINATOR FUNCTIONS==========
