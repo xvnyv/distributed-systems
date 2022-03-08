@@ -20,7 +20,8 @@ type DataObject struct {
 
 func handleWriteRequest(w http.ResponseWriter, r *http.Request) {
 	var object DataObject
-	err := json.Unmarshal(r.Body, &object)
+	body, _ := ioutil.ReadAll(r.Body)
+	err := json.Unmarshal(body, &object)
 	fmt.Println(err)
 	fmt.Println(object)
 	query := r.URL.Query()
