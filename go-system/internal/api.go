@@ -16,7 +16,7 @@ import (
 // 	VectorClock []int  `json: context`
 // }
 
-// json body = {Key: "heloosadf" , Value: , VectorClock}
+// test with curl -X POST http://localhost:8000/write-request \   -H "Content-Type: application/json" \   -d '{"key": "abcd", "value": "efgh", "vectorclock": [1,0,0,0,0]}' \
 
 func handleWriteRequest(w http.ResponseWriter, r *http.Request) {
 	var object DataObject
@@ -26,7 +26,7 @@ func handleWriteRequest(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(object)
 	query := r.URL.Query()
 	fmt.Printf("%v\n", query)
-	fmt.Fprintf(w, "Welcome to the HomePage! Query - %v", query)
+	fmt.Fprintf(w, "Welcome to the HomePage! Object - %v", object)
 	fmt.Println("Endpoint Hit: homePage")
 }
 
