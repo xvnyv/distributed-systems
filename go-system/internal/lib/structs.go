@@ -3,15 +3,21 @@ package lib
 type MessageType int
 
 type NodeData struct {
+	Id       int
+	Ip       string
+	Position int
+}
+
+type NodeMap map[int]NodeData //int refers to position in the ring
+
+type Node struct {
 	Id           int
 	Ip           string
 	Position     int
-	NodeMap      map[int]NodeData //int refers to position in the ring
+	NodeMap      NodeMap
 	Successors   []int
 	Predecessors []int
 }
-
-type NodeMap map[int]NodeData
 
 type Message struct {
 	Id       int
