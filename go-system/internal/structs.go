@@ -27,6 +27,15 @@ const (
 )
 
 type NodeData struct {
+	Id           int
+	Ip           string
+	Position     int
+	NodeMap      map[int]NodeData //int refers to position in the ring
+	Successors   []int
+	Predecessors []int
+}
+
+type NodeMap struct {
 }
 
 type Message struct {
