@@ -1,0 +1,25 @@
+POST http://localhost:8000/update
+content-type: application/json
+
+{
+    "key": "u9999",
+    "value": "i1234"
+}
+
+###
+POST http://localhost:8000/update
+content-type: application/json
+
+{
+    "key": "u9998",
+    "value": "i1234"
+}
+
+### 
+POST http://localhost:8000/update
+content-type: application/json
+
+{
+    "key": "u9997",
+    "value": "i1234"
+}
