@@ -1,4 +1,4 @@
-package main
+package lib
 
 import (
 	"encoding/json"
@@ -9,12 +9,12 @@ import (
 	// "github.com/distributed-systems/go-system/lib"
 )
 
-type DataObject struct {
-	//the thing we store
-	Key         string `json: key`
-	Value       string `json: value` //base64
-	VectorClock []int  `json: context`
-}
+// type DataObject struct {
+// 	//the thing we store
+// 	Key         string `json: key`
+// 	Value       string `json: value` //base64
+// 	VectorClock []int  `json: context`
+// }
 
 // json body = {Key: "heloosadf" , Value: , VectorClock}
 
@@ -35,7 +35,7 @@ func handleMessage2(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Endpoint Hit: homePage2")
 }
 
-func handleRequests() {
+func HandleRequests() {
 	http.HandleFunc("/write-request", handleWriteRequest)
 	http.HandleFunc("/read-request", handleMessage2)
 	http.HandleFunc("/write-success", handleWriteRequest)
@@ -49,9 +49,6 @@ func handleRequests() {
 	log.Fatal(http.ListenAndServe(":8000", nil))
 }
 
-func main() {
-	handleRequests()
-}
 func get() {
 	resp, err := http.Get("http://localhost:8000/write-request/hello")
 	if err != nil {
