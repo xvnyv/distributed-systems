@@ -1,4 +1,4 @@
-package lib
+package api
 
 import (
 	"encoding/json"
@@ -6,7 +6,10 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+
 	// "github.com/distributed-systems/go-system/lib"
+
+	lib "github.com/distributed-systems/go-system/internal/lib"
 )
 
 // type DataObject struct {
@@ -19,7 +22,7 @@ import (
 // test with curl -X POST http://localhost:8000/write-request \   -H "Content-Type: application/json" \   -d '{"key": "abcd", "value": "efgh", "vectorclock": [1,0,0,0,0]}' \
 
 func handleWriteRequest(w http.ResponseWriter, r *http.Request) {
-	var object DataObject
+	var object lib.DataObject
 	body, _ := ioutil.ReadAll(r.Body)
 	err := json.Unmarshal(body, &object)
 	fmt.Println(err)
