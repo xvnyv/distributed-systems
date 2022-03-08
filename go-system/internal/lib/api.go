@@ -1,12 +1,14 @@
 package lib
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"sort"
+	"sync"
 )
 
 func handleWriteRequest(w http.ResponseWriter, r *http.Request) {
@@ -25,6 +27,8 @@ func handleMessage2(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Welcome to the HomePage2!")
 	fmt.Println("Endpoint Hit: homePage2")
 }
+
+// ==========START COORDINATOR FUNCTIONS==========
 
 func getResponsibleNodes(keyPos int, nodeMap NodeMap) [REPLICATION_FACTOR]NodeData {
 	posArr := []int{}
@@ -54,11 +58,35 @@ func getResponsibleNodes(keyPos int, nodeMap NodeMap) [REPLICATION_FACTOR]NodeDa
 	return responsibleNodes
 }
 
-func (n *Node) sendWriteRequest(node NodeData) {
+func (n *Node) sendWriteRequest(object DataObject, node NodeData, successCount int, mutex sync.Mutex) {
+	jsonData, _ := json.Marshal(object)
+	resp, err := http.Post(fmt.Sprintf("%s/write-request", node.Ip), "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		log.Fatal(err)
+	}
+	// TODO: HANDLE FAILURE TIMEOUT SCENARIO WHEN DEALING WITH HINTED HANDOFF
+
+	fmt.Printf("write-request response: %v\n", resp)
+	mutex.Lock()
+	successCount++
+	mutex.Unlock()
 }
 
-func (n *Node) sendWriteRequests(nodes [REPLICATION_FACTOR]NodeData) {
+func (n *Node) sendWriteRequests(object DataObject, nodes [REPLICATION_FACTOR]NodeData) {
+	var coordWriteReqMutex sync.Mutex
+	successfulWriteCount := 0
 
+	for _, node := range nodes {
+		go n.sendWriteRequest(object, node, successfulWriteCount, coordWriteReqMutex)
+	}
+
+	for {
+		coordWriteReqMutex.Lock()
+		if successfulWriteCount >= MIN_WRITE_SUCCESS {
+			break
+		}
+		coordWriteReqMutex.Unlock()
+	}
 }
 
 func (n *Node) handleUpdate(w http.ResponseWriter, r *http.Request) {
@@ -80,8 +108,9 @@ func (n *Node) handleUpdate(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("Responsible nodes: %v\n", responsibleNodes)
 
 	// Send write requests
-	n.sendWriteRequests(responsibleNodes)
+	n.sendWriteRequests(object, responsibleNodes)
 
+	// Send response to client
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"result": "ok"})
 }
@@ -90,13 +119,10 @@ func (n *Node) handleGet(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func handleTest(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Welcome!")
-}
+// ==========END COORDINATOR FUNCTIONS==========
 
 func (n *Node) HandleRequests() {
 	// Internal API
-	http.HandleFunc("/", handleTest)
 	http.HandleFunc("/write-request", handleWriteRequest)
 	http.HandleFunc("/read-request", handleMessage2)
 	http.HandleFunc("/write-success", handleWriteRequest)
@@ -112,8 +138,7 @@ func (n *Node) HandleRequests() {
 	http.HandleFunc("/update", n.handleUpdate)
 	http.HandleFunc("/get", n.handleGet)
 
-	// log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", n.Port), nil))
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", 8000), nil))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", n.Port), nil))
 }
 
 func get() {
