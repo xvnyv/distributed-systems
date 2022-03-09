@@ -17,4 +17,4 @@
 .DS_Store
 
 # badger internal storage folders
-go-system/internal/lib/tmp
+go-system/internal/lib/tmp/
