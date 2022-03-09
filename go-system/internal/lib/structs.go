@@ -13,6 +13,7 @@ type NodeMap map[int]NodeData //int refers to position in the ring
 type Node struct {
 	Id           int
 	Ip           string
+	Port         int
 	Position     int
 	NodeMap      NodeMap
 	Successors   []int
