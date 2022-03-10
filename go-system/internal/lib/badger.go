@@ -117,6 +117,9 @@ func (n *Node) BadgerGetKeys() ([]string, error) {
 	opts.Logger = nil
 
 	db, err := badger.Open(opts)
+	if err != nil {
+		return []string{}, err
+	}
 	defer db.Close()
 	result := make([]string, 0)
 
