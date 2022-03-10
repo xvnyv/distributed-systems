@@ -8,7 +8,7 @@ import (
 	badger "github.com/dgraph-io/badger/v3"
 )
 
-func (n *Node) badger_write(o []DataObject) error {
+func (n *Node) BadgerWrite(o []DataObject) error {
 	opts := badger.DefaultOptions(fmt.Sprintf("tmp/%v/badger", n.Id))
 	opts.Logger = nil
 
@@ -43,7 +43,7 @@ func (n *Node) badger_write(o []DataObject) error {
 /**
 Returns empty DataObject if there is an error reading from the database with the provided key.
 */
-func (n *Node) badger_read(key string) (DataObject, error) {
+func (n *Node) BadgerRead(key string) (DataObject, error) {
 	opts := badger.DefaultOptions(fmt.Sprintf("tmp/%v/badger", n.Id))
 	opts.Logger = nil
 
@@ -88,7 +88,7 @@ func (n *Node) badger_read(key string) (DataObject, error) {
 	return res, err
 }
 
-func (n *Node) badger_delete(keys []string) error {
+func (n *Node) BadgerDelete(keys []string) error {
 	opts := badger.DefaultOptions(fmt.Sprintf("tmp/%v/badger", n.Id))
 	opts.Logger = nil
 
@@ -112,7 +112,7 @@ func (n *Node) badger_delete(keys []string) error {
 	return err
 }
 
-func (n *Node) badger_get_keys() ([]string, error) {
+func (n *Node) BadgerGetKeys() ([]string, error) {
 	opts := badger.DefaultOptions(fmt.Sprintf("tmp/%v/badger", n.Id))
 	opts.Logger = nil
 

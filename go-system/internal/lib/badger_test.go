@@ -20,12 +20,12 @@ var keylst []string = make([]string, 0)
 
 func TestBadgerReadWriteDelete(t *testing.T) {
 
-	err := testNode.badger_write(testDataArray)
+	err := testNode.BadgerWrite(testDataArray)
 	if err != nil {
 		t.Fatal("Write Failed")
 	}
 
-	newDataobject, err := testNode.badger_read(testData.Key)
+	newDataobject, err := testNode.BadgerRead(testData.Key)
 
 	if err != nil {
 		t.Errorf("ggwp %v ", err)
@@ -35,8 +35,8 @@ func TestBadgerReadWriteDelete(t *testing.T) {
 		t.Errorf("Expected %v, got %v", testData, newDataobject)
 	}
 
-	testNode.badger_delete([]string{testData.Key})
-	newDataobject, err = testNode.badger_read(testData.Key)
+	testNode.BadgerDelete([]string{testData.Key})
+	newDataobject, err = testNode.BadgerRead(testData.Key)
 	if err.Error() != "Key not found" {
 		t.Errorf("ggwp %v ", err)
 	}
@@ -55,11 +55,11 @@ func TestBadgerGetKeys(t *testing.T) {
 		keylst = append(keylst, tempObject.Key)
 		dataObjectlst = append(dataObjectlst, tempObject)
 	}
-	err := testNode.badger_write(dataObjectlst)
+	err := testNode.BadgerWrite(dataObjectlst)
 	if err != nil {
 		t.Errorf("ggwp %v ", err)
 	}
-	result, err := testNode.badger_get_keys()
+	result, err := testNode.BadgerGetKeys()
 	if err != nil {
 		t.Errorf("ggwp %v ", err)
 	}
@@ -67,7 +67,7 @@ func TestBadgerGetKeys(t *testing.T) {
 		t.Errorf("Expected %v, got %v", keylst, result)
 	}
 
-	err = testNode.badger_delete(keylst)
+	err = testNode.BadgerDelete(keylst)
 	if err != nil {
 		t.Errorf("ggwp %v ", err)
 	}
