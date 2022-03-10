@@ -7,6 +7,7 @@ import (
 	badger "github.com/dgraph-io/badger/v3"
 )
 
+//testcommit
 func (n *Node) badger_start() {
 	// Open the Badger database located in the /tmp/badger directory.
 	// It will be created if it doesn't exist.
