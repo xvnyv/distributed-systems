@@ -1,8 +1,8 @@
 package lib
 
 import (
-	"fmt"
 	"crypto/md5"
+	"fmt"
 	"math/big"
 	"strconv"
 )
@@ -19,15 +19,14 @@ func HashMD5(s string) int {
 }
 
 // Function to allocate the given UserID to a node and return that nodeData and keyHash
-func (n *Node) AllocateKey(key string) (NodeData, string) {
+func (ring *Ring) AllocateKey(key string) (NodeData, string) {
 	// nodeMap := ringServer.Ring.RingNodeDataMap
 	hashKey := HashMD5(key)
 	fmt.Printf("this is the hash below: \n")
-	fmt.Println(hashKey) 
+	fmt.Println(hashKey)
 
-	
 	nodeId := hashKey % 10 //based on the hash generated, we will modulo it to find out which node will take responsibility.
 
 	// to do: replication is not accounted for, need to send to other nodes also in case node down.
-	return n.NodeMap[nodeId], strconv.Itoa(hashKey)
+	return ring.NodeDataMap[nodeId], strconv.Itoa(hashKey)
 }

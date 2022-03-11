@@ -18,26 +18,26 @@ import (
 Read will obtain information from UserID.
 */
 
-func (n *Node) handleWriteRequest(w http.ResponseWriter, r *http.Request) {
+func (ring *Ring) handleWriteRequest(w http.ResponseWriter, r *http.Request) {
 	var dao DataObject
 	body, _ := ioutil.ReadAll(r.Body)
 	err := json.Unmarshal(body, &dao)
 	fmt.Println(err)
-	
-	nodeData, hashKey := n.AllocateKey(dao.UserID)
+
+	nodeData, hashKey := ring.AllocateKey(dao.UserID)
 	message2 := Message{
-		Id: 1, 
-		Sender: n.Id, 
-		Receiver: nodeData.Id, 
-		Type: WriteRequest, 
-		MetaData: hashKey,
+		Id:         1,
+		Sender:     69,
+		Receiver:   nodeData.Id,
+		Type:       WriteRequest,
+		MetaData:   hashKey,
 		itemObject: dao.Items, //placeholder for the hashkey
 	}
 	requestBody, _ := json.Marshal(message2)
 	postURL := fmt.Sprintf("http://%s:%s/write", nodeData.Ip, nodeData.Port)
-	
+
 	resp, err := http.Post(postURL, "application/json", bytes.NewReader(requestBody))
-	
+
 	if err != nil {
 		fmt.Println(err)
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -245,24 +245,19 @@ func (n *Node) handleGet(w http.ResponseWriter, r *http.Request) {
 
 // ==========END COORDINATOR FUNCTIONS==========
 
-func (n *Node) HandleRequests() {
+func (r *Ring) HandleRequests() {
 	// Internal API
-	http.HandleFunc("/write-request", n.handleWriteRequest)
+	http.HandleFunc("/write-request", handleMessage2)
 	http.HandleFunc("/read-request", handleMessage2)
-	http.HandleFunc("/write-success", n.handleWriteRequest)
-	http.HandleFunc("/read-success", n.handleWriteRequest)
-	http.HandleFunc("/join-request", n.handleWriteRequest)
-	http.HandleFunc("/join-broadcast", n.handleWriteRequest)
-	http.HandleFunc("/join-offer", n.handleWriteRequest)
-	http.HandleFunc("/data-migration", n.handleWriteRequest)
-	http.HandleFunc("/handover-request", n.handleWriteRequest)
-	http.HandleFunc("/handover-success", n.handleWriteRequest)
+	http.HandleFunc("/write-success", handleMessage2)
+	http.HandleFunc("/read-success", handleMessage2)
+	http.HandleFunc("/join-request", handleMessage2)
+	http.HandleFunc("/join-broadcast", handleMessage2)
+	http.HandleFunc("/join-offer", handleMessage2)
+	http.HandleFunc("/data-migration", handleMessage2)
+	http.HandleFunc("/handover-request", handleMessage2)
+	http.HandleFunc("/handover-success", handleMessage2)
 
-	// External API
-	http.HandleFunc("/update", n.handleUpdate)
-	http.HandleFunc("/get", n.handleGet)
-
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", n.Port), nil))
 }
 
 func get() {

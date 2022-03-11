@@ -2,10 +2,15 @@ package lib
 
 type MessageType int
 
+type Ring struct {
+	MaxID       int // maxID in ring. if -1, means no node in ring
+	NodeDataMap map[int]NodeData
+}
+
 type NodeData struct {
 	Id       int
 	Ip       string
-	Port int
+	Port     int
 	Position int
 }
 
@@ -22,27 +27,26 @@ type Node struct {
 }
 
 type Message struct {
-	Id       int
-	Sender   int
-	Receiver int
-	Type     MessageType
-	Content  string
-	MetaData string // may contain intended receiver
+	Id         int
+	Sender     int
+	Receiver   int
+	Type       MessageType
+	Content    string
+	MetaData   string // may contain intended receiver
 	itemObject map[int]ItemObject
 }
 
-
 type DataObject struct {
-	UserID string
-	Items map[int]ItemObject
+	UserID      string
+	Items       map[int]ItemObject
 	VectorClock []int
- }
- 
- type ItemObject struct{
- 	Id int
-	Name string
+}
+
+type ItemObject struct {
+	Id       int
+	Name     string
 	Quantity int
- }
+}
 
 const (
 	WriteRequest MessageType = iota //Object with optional vector clock
