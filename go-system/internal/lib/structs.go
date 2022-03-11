@@ -29,12 +29,19 @@ type Message struct {
 	MetaData string // may contain intended receiver
 }
 
+
 type DataObject struct {
-	//the thing we store
-	Key         string
-	Value       string //base64
+	UserID string
+	Items map[int]ItemObject
 	VectorClock []int
-}
+ }
+ 
+ type ItemObject struct{
+ 	Id int
+	Name string
+	Quantity int
+ 
+ }
 
 const (
 	WriteRequest MessageType = iota //Object with optional vector clock

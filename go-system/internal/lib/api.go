@@ -13,6 +13,11 @@ import (
 	"sync"
 )
 
+/* Write would need: ItemID, ItemName, ItemQuantity and UserID. 
+
+Read will obtain information from UserID. 
+*/
+
 func handleWriteRequest(w http.ResponseWriter, r *http.Request) {
 	var object DataObject
 	body, _ := ioutil.ReadAll(r.Body)
@@ -162,7 +167,7 @@ func (n *Node) handleUpdate(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(object)
 
 	// Get position of object on ring
-	pos := HashMD5(object.Key)
+	pos := HashMD5(object.UserID)
 	fmt.Printf("Position: %d\n", pos)
 
 	// Get nodes that should store this object
