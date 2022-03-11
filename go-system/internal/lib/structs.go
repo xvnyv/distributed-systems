@@ -28,6 +28,7 @@ type Message struct {
 	Type     MessageType
 	Content  string
 	MetaData string // may contain intended receiver
+	itemObject map[int]ItemObject
 }
 
 
@@ -41,7 +42,6 @@ type DataObject struct {
  	Id int
 	Name string
 	Quantity int
- 
  }
 
 const (

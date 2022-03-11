@@ -30,10 +30,12 @@ func (n *Node) handleWriteRequest(w http.ResponseWriter, r *http.Request) {
 		Sender: n.Id, 
 		Receiver: nodeData.Id, 
 		Type: WriteRequest, 
-		MetaData: hashKey, //placeholder for the hashkey
+		MetaData: hashKey,
+		itemObject: dao.Items, //placeholder for the hashkey
 	}
 	requestBody, _ := json.Marshal(message2)
 	postURL := fmt.Sprintf("http://%s:%s/write", nodeData.Ip, nodeData.Port)
+	
 	resp, err := http.Post(postURL, "application/json", bytes.NewReader(requestBody))
 	
 	if err != nil {
