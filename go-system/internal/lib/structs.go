@@ -5,6 +5,7 @@ type MessageType int
 type NodeData struct {
 	Id       int
 	Ip       string
+	Port int
 	Position int
 }
 

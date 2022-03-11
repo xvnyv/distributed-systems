@@ -13,21 +13,51 @@ import (
 	"sync"
 )
 
-/* Write would need: ItemID, ItemName, ItemQuantity and UserID. 
+/* Write would need: ItemID, ItemName, ItemQuantity and UserID.
 
-Read will obtain information from UserID. 
+Read will obtain information from UserID.
 */
 
-func handleWriteRequest(w http.ResponseWriter, r *http.Request) {
-	var object DataObject
+func (n *Node) handleWriteRequest(w http.ResponseWriter, r *http.Request) {
+	var dao DataObject
 	body, _ := ioutil.ReadAll(r.Body)
-	err := json.Unmarshal(body, &object)
+	err := json.Unmarshal(body, &dao)
 	fmt.Println(err)
-	fmt.Println(object)
-	query := r.URL.Query()
-	fmt.Printf("%v\n", query)
-	fmt.Fprintf(w, "Welcome to the HomePage! Object - %v", object)
-	fmt.Println("Endpoint Hit: homePage")
+	
+	nodeData, hashKey := n.AllocateKey(dao.UserID)
+	message2 := Message{
+		Id: 1, 
+		Sender: n.Id, 
+		Receiver: nodeData.Id, 
+		Type: WriteRequest, 
+		MetaData: hashKey, //placeholder for the hashkey
+	}
+	requestBody, _ := json.Marshal(message2)
+	postURL := fmt.Sprintf("http://%s:%s/write", nodeData.Ip, nodeData.Port)
+	resp, err := http.Post(postURL, "application/json", bytes.NewReader(requestBody))
+	
+	if err != nil {
+		fmt.Println(err)
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	defer resp.Body.Close()
+	body2, _ := ioutil.ReadAll(resp.Body)
+
+	// Echo response back to Frontend
+	if resp.StatusCode == 200 {
+		fmt.Println("Successfully wrote to node. Response:", string(body2))
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(string(body2)))
+	} else {
+		fmt.Println("Failed to write to node. Reason:", string(body2))
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(string(body2)))
+	}
 }
 
 func handleMessage2(w http.ResponseWriter, r *http.Request) {
@@ -215,16 +245,16 @@ func (n *Node) handleGet(w http.ResponseWriter, r *http.Request) {
 
 func (n *Node) HandleRequests() {
 	// Internal API
-	http.HandleFunc("/write-request", handleWriteRequest)
+	http.HandleFunc("/write-request", n.handleWriteRequest)
 	http.HandleFunc("/read-request", handleMessage2)
-	http.HandleFunc("/write-success", handleWriteRequest)
-	http.HandleFunc("/read-success", handleWriteRequest)
-	http.HandleFunc("/join-request", handleWriteRequest)
-	http.HandleFunc("/join-broadcast", handleWriteRequest)
-	http.HandleFunc("/join-offer", handleWriteRequest)
-	http.HandleFunc("/data-migration", handleWriteRequest)
-	http.HandleFunc("/handover-request", handleWriteRequest)
-	http.HandleFunc("/handover-success", handleWriteRequest)
+	http.HandleFunc("/write-success", n.handleWriteRequest)
+	http.HandleFunc("/read-success", n.handleWriteRequest)
+	http.HandleFunc("/join-request", n.handleWriteRequest)
+	http.HandleFunc("/join-broadcast", n.handleWriteRequest)
+	http.HandleFunc("/join-offer", n.handleWriteRequest)
+	http.HandleFunc("/data-migration", n.handleWriteRequest)
+	http.HandleFunc("/handover-request", n.handleWriteRequest)
+	http.HandleFunc("/handover-success", n.handleWriteRequest)
 
 	// External API
 	http.HandleFunc("/update", n.handleUpdate)
