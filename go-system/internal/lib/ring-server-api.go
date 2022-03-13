@@ -10,19 +10,57 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
+	"strconv"
 	"sync"
 )
 
-func handleWriteRequest(w http.ResponseWriter, r *http.Request) {
-	var object DataObject
+/* Write would need: ItemID, ItemName, ItemQuantity and UserID.
+
+Read will obtain information from UserID.
+*/
+
+func (ring *Ring) handleWriteRequest(w http.ResponseWriter, r *http.Request) {
+	var dao DataObject
 	body, _ := ioutil.ReadAll(r.Body)
-	err := json.Unmarshal(body, &object)
+	err := json.Unmarshal(body, &dao)
 	fmt.Println(err)
-	fmt.Println(object)
-	query := r.URL.Query()
-	fmt.Printf("%v\n", query)
-	fmt.Fprintf(w, "Welcome to the HomePage! Object - %v", object)
-	fmt.Println("Endpoint Hit: homePage")
+
+	nodeData, hashKey := ring.AllocateKey(dao.UserID)
+	message2 := Message{
+		Id:         1,
+		Sender:     ring.Id,
+		Receiver:   nodeData.Id,
+		Type:       WriteRequest,
+		MetaData:   hashKey,
+		itemObject: dao.Items, //placeholder for the hashkey
+	}
+	requestBody, _ := json.Marshal(message2)
+	postURL := fmt.Sprintf("http://%s:%s/write", nodeData.Ip, strconv.Itoa(nodeData.Port))
+
+	resp, err := http.Post(postURL, "application/json", bytes.NewReader(requestBody))
+
+	if err != nil {
+		fmt.Println(err)
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	defer resp.Body.Close()
+	body2, _ := ioutil.ReadAll(resp.Body)
+
+	// Echo response back to Frontend
+	if resp.StatusCode == 200 {
+		fmt.Println("Successfully wrote to node. Response:", string(body2))
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(string(body2)))
+	} else {
+		fmt.Println("Failed to write to node. Reason:", string(body2))
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(string(body2)))
+	}
 }
 
 func handleMessage2(w http.ResponseWriter, r *http.Request) {
@@ -162,7 +200,7 @@ func (n *Node) handleUpdate(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(object)
 
 	// Get position of object on ring
-	pos := HashMD5(object.Key)
+	pos := HashMD5(object.UserID)
 	fmt.Printf("Position: %d\n", pos)
 
 	// Get nodes that should store this object
@@ -208,24 +246,19 @@ func (n *Node) handleGet(w http.ResponseWriter, r *http.Request) {
 
 // ==========END COORDINATOR FUNCTIONS==========
 
-func (n *Node) HandleRequests() {
+func (r *Ring) HandleRequests() {
 	// Internal API
-	http.HandleFunc("/write-request", handleWriteRequest)
+	http.HandleFunc("/write-request", handleMessage2)
 	http.HandleFunc("/read-request", handleMessage2)
-	http.HandleFunc("/write-success", handleWriteRequest)
-	http.HandleFunc("/read-success", handleWriteRequest)
-	http.HandleFunc("/join-request", handleWriteRequest)
-	http.HandleFunc("/join-broadcast", handleWriteRequest)
-	http.HandleFunc("/join-offer", handleWriteRequest)
-	http.HandleFunc("/data-migration", handleWriteRequest)
-	http.HandleFunc("/handover-request", handleWriteRequest)
-	http.HandleFunc("/handover-success", handleWriteRequest)
+	http.HandleFunc("/write-success", handleMessage2)
+	http.HandleFunc("/read-success", handleMessage2)
+	http.HandleFunc("/join-request", handleMessage2)
+	http.HandleFunc("/join-broadcast", handleMessage2)
+	http.HandleFunc("/join-offer", handleMessage2)
+	http.HandleFunc("/data-migration", handleMessage2)
+	http.HandleFunc("/handover-request", handleMessage2)
+	http.HandleFunc("/handover-success", handleMessage2)
 
-	// External API
-	http.HandleFunc("/update", n.handleUpdate)
-	http.HandleFunc("/get", n.handleGet)
-
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", n.Port), nil))
 }
 
 func get() {

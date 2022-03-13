@@ -2,7 +2,9 @@ package lib
 
 import (
 	"crypto/md5"
+	"fmt"
 	"math/big"
+	"strconv"
 )
 
 func HashMD5(s string) int {
@@ -16,6 +18,18 @@ func HashMD5(s string) int {
 	return int(ringPosBigInt.Mod(hashedBigInt, maxRingPosBigInt).Uint64())
 }
 
+// Function to allocate the given UserID to a node and return that nodeData and keyHash
+func (ring *Ring) AllocateKey(key string) (NodeData, string) {
+	// nodeMap := ringServer.Ring.RingNodeDataMap
+	hashKey := HashMD5(key)
+	fmt.Printf("this is the hash below: \n")
+	fmt.Println(hashKey)
+
+	nodeId := hashKey % 10 //based on the hash generated, we will modulo it to find out which node will take responsibility.
+
+	// to do: replication is not accounted for, need to send to other nodes also in case node down.
+	return ring.NodeDataMap[nodeId], strconv.Itoa(hashKey)
+}
 func OrderedIntArrayEqual(a, b []int) bool {
 	if len(a) != len(b) {
 		return false
@@ -63,12 +77,12 @@ func UnorderedStringArrayEqual(a, b []string) bool {
 }
 
 func (o *DataObject) IsEqual(b DataObject) bool {
-	if o.Key != b.Key {
+	if o.UserID != b.UserID {
 		return false
 	}
-	if o.Value != b.Value {
-		return false
-	}
+	// if o.Items != b.Items {
+	// 	return false
+	// }
 	if !OrderedIntArrayEqual(o.VectorClock, b.VectorClock) {
 		return false
 	}
