@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
+	"strconv"
 	"sync"
 )
 
@@ -27,14 +28,14 @@ func (ring *Ring) handleWriteRequest(w http.ResponseWriter, r *http.Request) {
 	nodeData, hashKey := ring.AllocateKey(dao.UserID)
 	message2 := Message{
 		Id:         1,
-		Sender:     69,
+		Sender:     ring.Id,
 		Receiver:   nodeData.Id,
 		Type:       WriteRequest,
 		MetaData:   hashKey,
 		itemObject: dao.Items, //placeholder for the hashkey
 	}
 	requestBody, _ := json.Marshal(message2)
-	postURL := fmt.Sprintf("http://%s:%s/write", nodeData.Ip, nodeData.Port)
+	postURL := fmt.Sprintf("http://%s:%s/write", nodeData.Ip, strconv.Itoa(nodeData.Port))
 
 	resp, err := http.Post(postURL, "application/json", bytes.NewReader(requestBody))
 

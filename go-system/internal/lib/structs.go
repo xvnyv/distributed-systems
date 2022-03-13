@@ -3,6 +3,7 @@ package lib
 type MessageType int
 
 type Ring struct {
+	Id          int
 	MaxID       int // maxID in ring. if -1, means no node in ring
 	NodeDataMap map[int]NodeData
 }
