@@ -2,12 +2,6 @@ package lib
 
 type MessageType int
 
-type Ring struct {
-	Id          int
-	MaxID       int // maxID in ring. if -1, means no node in ring
-	NodeDataMap map[int]NodeData
-}
-
 type NodeData struct {
 	Id       int
 	Ip       string
@@ -39,7 +33,7 @@ type Message struct {
 
 type DataObject struct {
 	UserID      string
-	Items       map[int]ItemObject
+	Item        ItemObject
 	VectorClock []int
 }
 

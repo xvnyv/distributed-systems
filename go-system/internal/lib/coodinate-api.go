@@ -9,8 +9,6 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"sort"
-	"strconv"
 	"sync"
 )
 
@@ -19,48 +17,87 @@ import (
 Read will obtain information from UserID.
 */
 
-func (ring *Ring) handleWriteRequest(w http.ResponseWriter, r *http.Request) {
+func (n *Node) handleWriteRequest(w http.ResponseWriter, r *http.Request) {
 	var dao DataObject
 	body, _ := ioutil.ReadAll(r.Body)
 	err := json.Unmarshal(body, &dao)
 	fmt.Println(err)
 
-	nodeData, hashKey := ring.AllocateKey(dao.UserID)
-	message2 := Message{
-		Id:         1,
-		Sender:     ring.Id,
-		Receiver:   nodeData.Id,
-		Type:       WriteRequest,
-		MetaData:   hashKey,
-		itemObject: dao.Items, //placeholder for the hashkey
-	}
-	requestBody, _ := json.Marshal(message2)
-	postURL := fmt.Sprintf("http://%s:%s/write", nodeData.Ip, strconv.Itoa(nodeData.Port))
+	hashKey := HashMD5(dao.UserID) % 10
+	responsibleNodes := n.GetResponsibleNodes(hashKey)
+	var coordWriteReqMutex sync.Mutex
+	successfulWriteCount := 0
+	go n.sendWriteRequest(dao, responsibleNodes[0], &successfulWriteCount, coordWriteReqMutex)
 
-	resp, err := http.Post(postURL, "application/json", bytes.NewReader(requestBody))
+	for {
+		coordWriteReqMutex.Lock()
+		if successfulWriteCount >= 1 { //! for now, there is no replication, only 1 node
+			break
+		}
+		coordWriteReqMutex.Unlock()
+	}
+	fmt.Println("Write request success for user id:", dao.UserID)
+
+	// writeRequestMessage := Message{
+	// 	Id:         1,
+	// 	Sender:     n.Id,
+	// 	Receiver:   responsibleNodes[0].Id,
+	// 	Type:       WriteRequest,
+	// 	MetaData:   strconv.Itoa(hashKey), // placeholder for the hash key
+	// 	itemObject: dao.Items,
+	// }
+
+	// requestBody, _ := json.Marshal(writeRequestMessage)
+	// writeRequestUrl := fmt.Sprintf("http://%s/write-request", n.Ip)
+
+	// res, err := http.Post(writeRequestUrl, "application/json", bytes.NewReader(requestBody))
+
+	// if err != nil {
+	// 	fmt.Println(err)
+	// 	w.Header().Set("Access-Control-Allow-Origin", "*")
+	// 	w.WriteHeader(http.StatusBadRequest)
+	// 	w.Write([]byte(err.Error()))
+	// 	return
+	// }
+	// defer res.Body.Close()
+	// resBody, _ := ioutil.ReadAll(res.Body)
+	// // Echo response back to Frontend
+	// if res.StatusCode == 200 {
+	// 	fmt.Println("Successfully wrote to node. Response:", string(resBody))
+	// 	w.Header().Set("Access-Control-Allow-Origin", "*")
+	// 	w.WriteHeader(http.StatusOK)
+	// 	w.Write([]byte(string(resBody)))
+	// } else {
+	// 	fmt.Println("Failed to write to node. Reason:", string(resBody))
+	// 	w.Header().Set("Access-Control-Allow-Origin", "*")
+	// 	w.WriteHeader(http.StatusBadRequest)
+	// 	w.Write([]byte(string(resBody)))
+	// }
+}
+
+func (n *Node) handleReadRequest(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	userId := query.Get("id")
+
+	hashKey := HashMD5(userId) % 10
+	responsibleNodes := n.GetResponsibleNodes(hashKey)
+	var coordWriteReqMutex sync.Mutex
+	successfulReadCount := 0
+	dao, err := n.sendReadRequest(userId, responsibleNodes[0], &successfulReadCount, coordWriteReqMutex)
 
 	if err != nil {
-		fmt.Println(err)
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(err.Error()))
+		log.Println("Error: ", err)
 		return
 	}
-	defer resp.Body.Close()
-	body2, _ := ioutil.ReadAll(resp.Body)
 
-	// Echo response back to Frontend
-	if resp.StatusCode == 200 {
-		fmt.Println("Successfully wrote to node. Response:", string(body2))
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(string(body2)))
-	} else {
-		fmt.Println("Failed to write to node. Reason:", string(body2))
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(string(body2)))
+	for {
+		coordWriteReqMutex.Lock()
+		if successfulReadCount >= 1 { //! for now, there is no replication, only 1 node
+			break
+		}
+		coordWriteReqMutex.Unlock()
 	}
+	fmt.Println("Read request success:", dao)
 }
 
 func handleMessage2(w http.ResponseWriter, r *http.Request) {
@@ -68,45 +105,15 @@ func handleMessage2(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Endpoint Hit: homePage2")
 }
 
-// ==========START COORDINATOR FUNCTIONS==========
-
-func (n *Node) getResponsibleNodes(keyPos int) [REPLICATION_FACTOR]NodeData {
-	posArr := []int{}
-
-	for pos, _ := range n.NodeMap {
-		posArr = append(posArr, pos)
-	}
-
-	sort.Ints(posArr)
-	fmt.Printf("Key position: %d\n", keyPos)
-	firstNodePosIndex := -1
-	for i, pos := range posArr {
-		if keyPos <= pos {
-			fmt.Printf("First node position: %d\n", pos)
-			firstNodePosIndex = i
-			break
-		}
-	}
-	if firstNodePosIndex == -1 {
-		firstNodePosIndex = 0
-	}
-
-	responsibleNodes := [REPLICATION_FACTOR]NodeData{}
-	for i := 0; i < REPLICATION_FACTOR; i++ {
-		responsibleNodes[i] = n.NodeMap[posArr[(firstNodePosIndex+i)%len(posArr)]]
-	}
-	return responsibleNodes
-}
-
-func (n *Node) sendWriteRequest(object DataObject, node NodeData, successCount *int, mutex sync.Mutex) {
-	jsonData, _ := json.Marshal(object)
-	resp, err := http.Post(fmt.Sprintf("%s/write-request", node.Ip), "application/json", bytes.NewBuffer(jsonData))
+func (n *Node) sendWriteRequest(dao DataObject, node NodeData, successCount *int, mutex sync.Mutex) {
+	jsonData, _ := json.Marshal(dao)
+	resp, err := http.Post(fmt.Sprintf("%s/write", node.Ip), "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		log.Println("Error: ", err)
 		return
 	}
-	// TODO: HANDLE FAILURE TIMEOUT SCENARIO WHEN DEALING WITH HINTED HANDOFF
 
+	// TODO: HANDLE FAILURE TIMEOUT SCENARIO WHEN DEALING WITH HINTED HANDOFF
 	// Retrieve response body
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(resp.Body)
@@ -135,25 +142,29 @@ func (n *Node) sendWriteRequests(object DataObject, nodes [REPLICATION_FACTOR]No
 	}
 }
 
-func (n *Node) sendReadRequest(key string, node NodeData, successCount *int, mutex sync.Mutex) {
+func (n *Node) sendReadRequest(key string, node NodeData, successCount *int, mutex sync.Mutex) (DataObject, error) {
 	// Add key to query params
-	base, _ := url.Parse(fmt.Sprintf("%s/read-request", node.Ip))
+	base, _ := url.Parse(fmt.Sprintf("%s/read", node.Ip))
 	params := url.Values{}
 	params.Add("key", key)
 	fmt.Println(params)
 	base.RawQuery = params.Encode()
 
+	var dao DataObject
+
 	// Send read request to node
-	resp, err := http.Get(base.String())
+	res, err := http.Get(base.String())
 	if err != nil {
 		log.Println("Error: ", err)
-		return
+		return dao, err
 	}
 
 	// TODO: DECIDE ON SCHEMA FOR RESPONSE DATA
-	defer resp.Body.Close()
-	body, _ := io.ReadAll(resp.Body)
+	defer res.Body.Close()
+	body, _ := io.ReadAll(res.Body)
 	fmt.Println("Read request response body:", body)
+	decodeError := json.Unmarshal(body, &dao)
+	fmt.Println(decodeError)
 
 	// TODO: HANDLE FAILURE TIMEOUT SCENARIO
 
@@ -164,6 +175,7 @@ func (n *Node) sendReadRequest(key string, node NodeData, successCount *int, mut
 	mutex.Lock()
 	*successCount++
 	mutex.Unlock()
+	return dao, nil
 }
 
 func (n *Node) sendReadRequests(key string, nodes [REPLICATION_FACTOR]NodeData) {
@@ -204,7 +216,7 @@ func (n *Node) handleUpdate(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("Position: %d\n", pos)
 
 	// Get nodes that should store this object
-	responsibleNodes := n.getResponsibleNodes(pos)
+	responsibleNodes := n.GetResponsibleNodes(pos)
 	fmt.Printf("Responsible nodes: %v\n", responsibleNodes)
 
 	// Send write requests
@@ -232,7 +244,7 @@ func (n *Node) handleGet(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("Position: %d\n", pos)
 
 	// Get nodes that should store this object
-	responsibleNodes := n.getResponsibleNodes(pos)
+	responsibleNodes := n.GetResponsibleNodes(pos)
 	fmt.Printf("Responsible nodes: %v\n", responsibleNodes)
 
 	// Send read requests
@@ -246,19 +258,23 @@ func (n *Node) handleGet(w http.ResponseWriter, r *http.Request) {
 
 // ==========END COORDINATOR FUNCTIONS==========
 
-func (r *Ring) HandleRequests() {
+func (n *Node) HandleRequests() {
 	// Internal API
-	http.HandleFunc("/write-request", handleMessage2)
-	http.HandleFunc("/read-request", handleMessage2)
-	http.HandleFunc("/write-success", handleMessage2)
+	http.HandleFunc("/write-request", n.handleWriteRequest)
+	http.HandleFunc("/read-request", n.handleReadRequest)
+	// http.HandleFunc("/write-success", handleMessage2)
 	http.HandleFunc("/read-success", handleMessage2)
-	http.HandleFunc("/join-request", handleMessage2)
-	http.HandleFunc("/join-broadcast", handleMessage2)
-	http.HandleFunc("/join-offer", handleMessage2)
-	http.HandleFunc("/data-migration", handleMessage2)
-	http.HandleFunc("/handover-request", handleMessage2)
-	http.HandleFunc("/handover-success", handleMessage2)
+	// http.HandleFunc("/join-request", handleMessage2)
+	// http.HandleFunc("/join-broadcast", handleMessage2)
+	// http.HandleFunc("/join-offer", handleMessage2)
+	// http.HandleFunc("/data-migration", handleMessage2)
+	// http.HandleFunc("/handover-request", handleMessage2)
+	// http.HandleFunc("/handover-success", handleMessage2)
 
+	// http.HandleFunc("/update", handleMessage2)
+	http.HandleFunc("/get", n.FulfilReadRequest)
+	http.HandleFunc("/write", n.FulfilWriteRequest)
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", n.Port), nil))
 }
 
 func get() {

@@ -4,7 +4,7 @@ import "fmt"
 
 const (
 	NUM_RING_POSITIONS int    = 100
-	REPLICATION_FACTOR int    = 3
+	REPLICATION_FACTOR int    = 1 // increase replication factor after base features are completed
 	MIN_READ_SUCCESS   int    = 2
 	MIN_WRITE_SUCCESS  int    = 2
 	BASE_URL           string = "http://127.0.0.1"
