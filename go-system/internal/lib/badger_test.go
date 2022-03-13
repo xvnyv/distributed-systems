@@ -1,17 +1,37 @@
 package lib
 
 import (
-	"fmt"
+	"reflect"
 	"strconv"
 	"testing"
 )
 
 var testNode Node = Node{Id: 1, Ip: "hello"}
 
+/**
+type DataObject struct {
+	UserID      string
+	Items       map[int]ItemObject
+	VectorClock []int
+}
+
+type ItemObject struct {
+	Id       int
+	Name     string
+	Quantity int
+}
+*/
+
 var testData DataObject = DataObject{
-	Key:         "hello",
-	Value:       "world",
+	UserID:      "hello",
+	Items:       map[int]ItemObject{testItem.Id: testItem},
 	VectorClock: []int{1, 0, 234, 347, 2, 34, 6, 6, 235, 7},
+}
+
+var testItem ItemObject = ItemObject{
+	Id:       3,
+	Name:     "hello",
+	Quantity: 5,
 }
 
 var testDataArray = []DataObject{testData}
@@ -25,18 +45,19 @@ func TestBadgerReadWriteDelete(t *testing.T) {
 		t.Fatal("Write Failed")
 	}
 
-	newDataobject, err := testNode.BadgerRead(testData.Key)
+	newDataobject, err := testNode.BadgerRead(testData.UserID)
 
 	if err != nil {
-		t.Errorf("ggwp %v ", err)
+		t.Errorf("Read error: %v ", err)
 	}
 
-	if !newDataobject.IsEqual(testData) {
+	//try deep equal
+	if !reflect.DeepEqual(newDataobject, testData) {
 		t.Errorf("Expected %v, got %v", testData, newDataobject)
 	}
 
-	testNode.BadgerDelete([]string{testData.Key})
-	newDataobject, err = testNode.BadgerRead(testData.Key)
+	testNode.BadgerDelete([]string{testData.UserID})
+	newDataobject, err = testNode.BadgerRead(testData.UserID)
 	if err.Error() != "Key not found" {
 		t.Errorf("ggwp %v ", err)
 	}
@@ -48,11 +69,11 @@ func TestBadgerGetKeys(t *testing.T) {
 	dataObjectlst := make([]DataObject, 0)
 	for i := 0; i < numberOfTestObjects; i++ {
 		tempObject := DataObject{
-			Key:         "adsfh" + strconv.Itoa(i),
-			Value:       fmt.Sprintf("adsfh%v", i),
+			UserID:      "adsfh" + strconv.Itoa(i),
+			Items:       map[int]ItemObject{i: ItemObject{Id: i, Name: "object" + strconv.Itoa(i), Quantity: i}},
 			VectorClock: []int{i, i, i, i, i, i, i, i},
 		}
-		keylst = append(keylst, tempObject.Key)
+		keylst = append(keylst, tempObject.UserID)
 		dataObjectlst = append(dataObjectlst, tempObject)
 	}
 	err := testNode.BadgerWrite(dataObjectlst)
