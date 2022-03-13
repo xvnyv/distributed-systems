@@ -29,7 +29,7 @@ func (ring *Ring) AllocateKey(key string) (NodeData, string) {
 
 	// to do: replication is not accounted for, need to send to other nodes also in case node down.
 	return ring.NodeDataMap[nodeId], strconv.Itoa(hashKey)
-
+}
 func OrderedIntArrayEqual(a, b []int) bool {
 	if len(a) != len(b) {
 		return false
@@ -77,12 +77,12 @@ func UnorderedStringArrayEqual(a, b []string) bool {
 }
 
 func (o *DataObject) IsEqual(b DataObject) bool {
-	if o.Key != b.Key {
+	if o.UserID != b.UserID {
 		return false
 	}
-	if o.Value != b.Value {
-		return false
-	}
+	// if o.Items != b.Items {
+	// 	return false
+	// }
 	if !OrderedIntArrayEqual(o.VectorClock, b.VectorClock) {
 		return false
 	}
