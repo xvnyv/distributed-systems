@@ -29,4 +29,62 @@ func (ring *Ring) AllocateKey(key string) (NodeData, string) {
 
 	// to do: replication is not accounted for, need to send to other nodes also in case node down.
 	return ring.NodeDataMap[nodeId], strconv.Itoa(hashKey)
+
+func OrderedIntArrayEqual(a, b []int) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i, v := range a {
+		if v != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func UnorderedIntArrayEqual(a, b []int) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	exists := make(map[int]bool)
+	for _, value := range a {
+		exists[value] = true
+	}
+	for _, value := range b {
+		if !exists[value] {
+			return false
+		}
+	}
+	return true
+
+}
+
+func UnorderedStringArrayEqual(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	exists := make(map[string]bool)
+	for _, value := range a {
+		exists[value] = true
+	}
+	for _, value := range b {
+		if !exists[value] {
+			return false
+		}
+	}
+	return true
+
+}
+
+func (o *DataObject) IsEqual(b DataObject) bool {
+	if o.Key != b.Key {
+		return false
+	}
+	if o.Value != b.Value {
+		return false
+	}
+	if !OrderedIntArrayEqual(o.VectorClock, b.VectorClock) {
+		return false
+	}
+	return true
 }
