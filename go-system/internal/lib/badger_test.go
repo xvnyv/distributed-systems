@@ -1,11 +1,27 @@
 package lib
 
 import (
+	"reflect"
 	"strconv"
 	"testing"
 )
 
 var testNode Node = Node{Id: 1, Ip: "hello"}
+
+/**
+type DataObject struct {
+	UserID      string
+	Items       map[int]ItemObject
+	VectorClock []int
+}
+
+type ItemObject struct {
+	Id       int
+	Name     string
+	Quantity int
+}
+*/
+
 
 var itemObj ItemObject = ItemObject{
 	Id:       1,
@@ -37,10 +53,11 @@ func TestBadgerReadWriteDelete(t *testing.T) {
 	newDataobject, err := testNode.BadgerRead(testData.UserID)
 
 	if err != nil {
-		t.Errorf("ggwp %v ", err)
+		t.Errorf("Read error: %v ", err)
 	}
 
-	if !newDataobject.IsEqual(testData) {
+	//try deep equal
+	if !reflect.DeepEqual(newDataobject, testData) {
 		t.Errorf("Expected %v, got %v", testData, newDataobject)
 	}
 

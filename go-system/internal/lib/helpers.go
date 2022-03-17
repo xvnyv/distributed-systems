@@ -63,6 +63,7 @@ func (n *Node) GetResponsibleNodes(keyPos int) [REPLICATION_FACTOR]NodeData {
 	return responsibleNodes
 }
 
+
 func OrderedIntArrayEqual(a, b []int) bool {
 	if len(a) != len(b) {
 		return false
@@ -108,6 +109,7 @@ func UnorderedStringArrayEqual(a, b []string) bool {
 	return true
 
 }
+
 
 func (o *ClientCart) IsEqual(b ClientCart) bool {
 	if o.UserID != b.UserID {
