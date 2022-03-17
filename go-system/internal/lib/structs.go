@@ -2,12 +2,6 @@ package lib
 
 type MessageType int
 
-type Ring struct {
-	Id          int
-	MaxID       int // maxID in ring. if -1, means no node in ring
-	NodeDataMap map[int]NodeData
-}
-
 type NodeData struct {
 	Id       int
 	Ip       string
@@ -37,9 +31,17 @@ type Message struct {
 	itemObject map[int]ItemObject
 }
 
-type DataObject struct {
+//Domain Object 
+type ClientCart struct {
 	UserID      string
-	Items       map[int]ItemObject
+	Item        map[int]ItemObject
+	VectorClock []int
+}
+
+//Need to create a Data Transfer Object
+type ClientCartDTO struct {
+	UserID      string
+	Item        ItemObject
 	VectorClock []int
 }
 

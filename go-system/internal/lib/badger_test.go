@@ -22,19 +22,24 @@ type ItemObject struct {
 }
 */
 
-var testData DataObject = DataObject{
-	UserID:      "hello",
-	Items:       map[int]ItemObject{testItem.Id: testItem},
+
+var itemObj ItemObject = ItemObject{
+	Id:       1,
+	Name:     "Pen",
+	Quantity: 44,
+}
+
+var testData ClientCart = ClientCart{
+	UserID: "hello",
+	Item: map[int]ItemObject{1: {
+		Id:       1,
+		Name:     "shift",
+		Quantity: 1,
+	}},
 	VectorClock: []int{1, 0, 234, 347, 2, 34, 6, 6, 235, 7},
 }
 
-var testItem ItemObject = ItemObject{
-	Id:       3,
-	Name:     "hello",
-	Quantity: 5,
-}
-
-var testDataArray = []DataObject{testData}
+var testDataArray = []ClientCart{testData}
 
 var keylst []string = make([]string, 0)
 
@@ -66,11 +71,15 @@ func TestBadgerReadWriteDelete(t *testing.T) {
 func TestBadgerGetKeys(t *testing.T) {
 	numberOfTestObjects := 100
 
-	dataObjectlst := make([]DataObject, 0)
+	dataObjectlst := make([]ClientCart, 0)
 	for i := 0; i < numberOfTestObjects; i++ {
-		tempObject := DataObject{
+		tempObject := ClientCart{
 			UserID:      "adsfh" + strconv.Itoa(i),
-			Items:       map[int]ItemObject{i: ItemObject{Id: i, Name: "object" + strconv.Itoa(i), Quantity: i}},
+			Item:         map[int]ItemObject{1: {
+				Id:       1,
+				Name:     "shift",
+				Quantity: 1,
+			}},
 			VectorClock: []int{i, i, i, i, i, i, i, i},
 		}
 		keylst = append(keylst, tempObject.UserID)

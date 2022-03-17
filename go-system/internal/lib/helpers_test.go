@@ -12,6 +12,26 @@ func TestHashMD5(t *testing.T) {
 	}
 }
 
+
+func TestDataObjectIsEqual(t *testing.T) {
+	var testData ClientCart = ClientCart{
+		UserID: "hello",
+		// Value:       "world",
+		VectorClock: []int{1, 0, 234, 347, 2, 34, 6, 6, 235, 7},
+	}
+
+	if !testData.IsEqual(testData) {
+		t.Errorf("Expected %v, got %v", true, false)
+	}
+}
+
+func TestOrderedIntArrayEqual(t *testing.T) {
+	testIntArray := []int{1, 2, 3, 4, 5}
+	if !OrderedIntArrayEqual(testIntArray, testIntArray) {
+		t.Errorf("Expected %v, got %v", true, false)
+	}
+}
+
 func TestUnorderedIntArrayEqual(t *testing.T) {
 	testIntArray1 := []int{1, 2, 3, 4, 5}
 	testIntArray2 := []int{5, 4, 3, 2, 1}

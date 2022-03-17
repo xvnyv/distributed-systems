@@ -31,7 +31,7 @@ func main() {
 	}
 
 	node := lib.Node{Id: *idFlagPtr, Ip: fmt.Sprintf("http://127.0.0.1:%d", *portFlagPtr), Port: *portFlagPtr, Position: pos, NodeMap: lib.TEMP_NODE_MAP}
-
+	log.Println(node)
 	go node.HandleRequests()
 
 	fmt.Println("Press Enter to end")

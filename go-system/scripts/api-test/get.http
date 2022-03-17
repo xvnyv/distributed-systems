@@ -1,1 +1,42 @@
-GET http://localhost:8000/get?key=u9999
+ 
+# Calculate hash
+# Send read request to responsible nodes
+### Handle write request
+GET http://localhost:8000/read-request?id=123
+
+
+# Read item in Badger DB
+# Send items back to Handle write request
+### Fulfill write request
+GET http://localhost:8000/read?id=123
+
+# Calculate hash
+# Send write request to responsible nodes
+### Handle write request
+POST http://localhost:8000/write-request
+
+{
+    "UserID": "124",
+    "Item": {
+        "Id": 12,
+        "Name": "pen",
+        "Quantity": 2
+    },
+    "VectorClock": [0, 1, 1]
+}
+
+# Change item in Badger DB
+# Send success msg back??
+
+### Fulfill write request
+POST http://localhost:8000/write
+
+{
+    "UserID": "123",
+    "Item": {
+        "Id": 12,
+        "Name": "pen",
+        "Quantity": 2
+    },
+    "VectorClock": [0, 1, 1]
+}
