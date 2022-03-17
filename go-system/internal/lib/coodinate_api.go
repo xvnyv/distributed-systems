@@ -40,8 +40,6 @@ func (n *Node) sendWriteRequest(c ClientCart, node NodeData, respChannel chan<- 
 	respChannel <- ChannelResp{node.Id, apiResp}
 
 	defer resp.Body.Close()
-	log.Println("Write request response body:", body)
-
 }
 
 /* Send requests to all responsible nodes concurrently and wait for minimum required nodes to succeed */

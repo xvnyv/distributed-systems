@@ -12,7 +12,7 @@ func (n *Node) FulfilWriteRequest(w http.ResponseWriter, r *http.Request) {
 	body, _ := ioutil.ReadAll(r.Body)
 	json.Unmarshal(body, &c)
 
-	log.Println("Write Request received: ", c)
+	log.Println("Write request received: ", c)
 
 	err := n.BadgerWrite([]ClientCart{c})
 
@@ -36,12 +36,15 @@ func (n *Node) FulfilWriteRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Write(jsonResp)
+	log.Println("Write request completed for", c)
 }
 
 func (n *Node) FulfilReadRequest(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 
 	userId := query.Get("id") //! type string
+
+	log.Println("Read Request received with key: ", userId)
 
 	c, err := n.BadgerRead(userId)
 
@@ -67,4 +70,5 @@ func (n *Node) FulfilReadRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Write(jsonResp)
+	log.Println("Read request completed for", c)
 }
