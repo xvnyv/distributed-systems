@@ -44,6 +44,13 @@ type ItemObject struct {
 	Quantity int
 }
 
+type APIResp struct {
+	//standard API response
+	Status STATUS_TYPE
+	Data   ClientCart //json
+	Error  error
+}
+
 const (
 	WriteRequest MessageType = iota //Object with optional vector clock
 	ReadRequest                     //Key, Maybe need vector clock

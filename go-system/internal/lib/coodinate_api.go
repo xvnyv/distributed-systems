@@ -12,124 +12,50 @@ import (
 	"sync"
 )
 
-/* Write would need: ItemID, ItemName, ItemQuantity and UserID.
+var respChannel = make(chan APIResp, 10)
 
-Read will obtain information from UserID.
-*/
-
-func (n *Node) handleWriteRequest(w http.ResponseWriter, r *http.Request) {
-	var c ClientCart
-	body, _ := ioutil.ReadAll(r.Body)
-	err := json.Unmarshal(body, &c)
-	fmt.Println(err)
-
-	hashKey := HashMD5(c.UserID) % 10
-	responsibleNodes := n.GetResponsibleNodes(hashKey)
-	var coordWriteReqMutex sync.Mutex
-	successfulWriteCount := 0
-	go n.sendWriteRequest(c, responsibleNodes[0], &successfulWriteCount, coordWriteReqMutex)
-
-	for {
-		coordWriteReqMutex.Lock()
-		if successfulWriteCount >= 1 { //! for now, there is no replication, only 1 node
-			break
-		}
-		coordWriteReqMutex.Unlock()
-	}
-	fmt.Println("Write request success for user id:", c.UserID)
-
-	// writeRequestMessage := Message{
-	// 	Id:         1,
-	// 	Sender:     n.Id,
-	// 	Receiver:   responsibleNodes[0].Id,
-	// 	Type:       WriteRequest,
-	// 	MetaData:   strconv.Itoa(hashKey), // placeholder for the hash key
-	// 	itemObject: dao.Items,
-	// }
-
-	// requestBody, _ := json.Marshal(writeRequestMessage)
-	// writeRequestUrl := fmt.Sprintf("http://%s/write-request", n.Ip)
-
-	// res, err := http.Post(writeRequestUrl, "application/json", bytes.NewReader(requestBody))
-
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	// 	w.WriteHeader(http.StatusBadRequest)
-	// 	w.Write([]byte(err.Error()))
-	// 	return
-	// }
-	// defer res.Body.Close()
-	// resBody, _ := ioutil.ReadAll(res.Body)
-	// // Echo response back to Frontend
-	// if res.StatusCode == 200 {
-	// 	fmt.Println("Successfully wrote to node. Response:", string(resBody))
-	// 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	// 	w.WriteHeader(http.StatusOK)
-	// 	w.Write([]byte(string(resBody)))
-	// } else {
-	// 	fmt.Println("Failed to write to node. Reason:", string(resBody))
-	// 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	// 	w.WriteHeader(http.StatusBadRequest)
-	// 	w.Write([]byte(string(resBody)))
-	// }
-}
-
-func (n *Node) handleReadRequest(w http.ResponseWriter, r *http.Request) {
-	query := r.URL.Query()
-	userId := query.Get("id")
-
-	hashKey := HashMD5(userId) % 10
-	responsibleNodes := n.GetResponsibleNodes(hashKey)
-	var coordWriteReqMutex sync.Mutex
-	successfulReadCount := 0
-	dao, err := n.sendReadRequest(userId, responsibleNodes[0], &successfulReadCount, coordWriteReqMutex)
-
-	if err != nil {
-		log.Println("Error: ", err)
-		return
-	}
-
-	for {
-		coordWriteReqMutex.Lock()
-		if successfulReadCount >= 1 { //! for now, there is no replication, only 1 node
-			break
-		}
-		coordWriteReqMutex.Unlock()
-	}
-	fmt.Println("Read request success:", dao)
-}
-
-func handleMessage2(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Welcome to the HomePage2!")
-	fmt.Println("Endpoint Hit: homePage2")
-}
-
-func (n *Node) sendWriteRequest(dto ClientCart, node NodeData, successCount *int, mutex sync.Mutex) {
-	jsonData, _ := json.Marshal(dto) // TODO ensure that the write API calls the correct node IP
+func (n *Node) sendWriteRequest(c ClientCart, node NodeData, successCount *int, mutex *sync.Mutex) {
+	jsonData, _ := json.Marshal(c)
 	resp, err := http.Post(fmt.Sprintf("%s/write", node.Ip), "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		log.Println("Error: ", err)
 		return
 	}
 
+	var apiResp APIResp
+	body, _ := io.ReadAll(resp.Body)
+	json.Unmarshal(body, &apiResp)
+
+	if resp.StatusCode == 201 {
+		mutex.Lock()
+		*successCount++
+		if *successCount == MIN_WRITE_SUCCESS {
+			respChannel <- apiResp
+		}
+		mutex.Unlock()
+	}
+
+	if resp.StatusCode == 500 {
+		// log error for debugging
+		//TODO handle if 2 pass and 1 fail
+		// extra mile: handle programmatic error
+
+		log.Fatal(apiResp.Error)
+	}
+
 	// TODO: HANDLE FAILURE TIMEOUT SCENARIO WHEN DEALING WITH HINTED HANDOFF
 	// Retrieve response body
 	defer resp.Body.Close()
-	body, _ := io.ReadAll(resp.Body)
 	fmt.Println("Write request response body:", body)
 
-	mutex.Lock()
-	*successCount++
-	mutex.Unlock()
 }
 
-func (n *Node) sendWriteRequests(object ClientCart, nodes [REPLICATION_FACTOR]NodeData) {
+func (n *Node) sendWriteRequests(c ClientCart, nodes [REPLICATION_FACTOR]NodeData) {
 	var coordWriteReqMutex sync.Mutex
 	successfulWriteCount := 0
 
 	for _, node := range nodes {
-		go n.sendWriteRequest(object, node, &successfulWriteCount, coordWriteReqMutex)
+		go n.sendWriteRequest(c, node, &successfulWriteCount, &coordWriteReqMutex)
 	}
 
 	// TODO: ADD CHANNEL HERE TO DETECT TIMEOUT
@@ -142,25 +68,95 @@ func (n *Node) sendWriteRequests(object ClientCart, nodes [REPLICATION_FACTOR]No
 	}
 }
 
-func (n *Node) sendReadRequest(key string, node NodeData, successCount *int, mutex sync.Mutex) (ClientCart, error) {
+/* Write would need: ItemID, ItemName, ItemQuantity and UserID.
+
+Read will obtain information from UserID.
+*/
+
+func (n *Node) handleWriteRequest(w http.ResponseWriter, r *http.Request) {
+	var c ClientCart
+	body, _ := ioutil.ReadAll(r.Body)
+	err := json.Unmarshal(body, &c)
+	if err != nil {
+		w.WriteHeader(400)
+		log.Fatal(err)
+		return
+	}
+	hashKey := HashMD5(c.UserID)
+	responsibleNodes := n.GetResponsibleNodes(hashKey)
+	//
+	//this parts needs to go to badger to commit the
+	if c.VectorClock == nil {
+		c.VectorClock = []int{}
+		for i := 0; i < len(n.NodeMap); i++ {
+			if i == n.Id {
+				c.VectorClock = append(c.VectorClock, 1)
+			} else {
+				c.VectorClock = append(c.VectorClock, 0)
+			}
+		}
+	} else {
+		c.VectorClock[n.Id]++
+	}
+	n.sendWriteRequests(c, responsibleNodes)
+
+	fmt.Println("Write request success for user id:", c.UserID)
+	w.Header().Set("Content-Type", "application/json")
+	resp := <-respChannel
+	json.NewEncoder(w).Encode(resp)
+}
+
+func (n *Node) handleReadRequest(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	userId := query.Get("id")
+
+	pos := HashMD5(userId)
+	responsibleNodes := n.GetResponsibleNodes(pos)
+	n.sendReadRequests(userId, responsibleNodes)
+
+	w.Header().Set("Content-Type", "application/json")
+	resp := <-respChannel
+	json.NewEncoder(w).Encode(resp)
+}
+
+func handleMessage2(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "Welcome to the HomePage2!")
+	fmt.Println("Endpoint Hit: homePage2")
+}
+
+func (n *Node) sendReadRequest(key string, node NodeData, successCount *int, mutex *sync.Mutex) {
 	// Add key to query params
 	base, _ := url.Parse(fmt.Sprintf("%s/read?id=%s", node.Ip, key)) // key = userID
 
-	var c ClientCart
-
 	// Send read request to node
-	res, err := http.Get(base.String())
+	resp, err := http.Get(base.String())
 	if err != nil {
 		log.Println("Error: ", err)
-		return c, err
 	}
 
+	var apiResp APIResp
+	body, _ := io.ReadAll(resp.Body)
+	json.Unmarshal(body, &apiResp)
+
+	if resp.StatusCode == 200 {
+		mutex.Lock()
+		*successCount++
+		if *successCount == MIN_READ_SUCCESS {
+			//TODO handle conflict
+			respChannel <- apiResp
+		}
+		mutex.Unlock()
+	}
+
+	if resp.StatusCode == 500 {
+		// log error for debugging
+		//TODO handle if 2 pass and 1 fail
+		// extra mile: handle programmatic error
+
+		log.Fatal(apiResp.Error)
+	}
 	// TODO: DECIDE ON SCHEMA FOR RESPONSE DATA
-	defer res.Body.Close()
-	body, _ := io.ReadAll(res.Body)
-	fmt.Println("Read request response body:", body)
-	decodeError := json.Unmarshal(body, &c)
-	fmt.Println(decodeError)
+	defer resp.Body.Close()
 
 	// TODO: HANDLE FAILURE TIMEOUT SCENARIO
 
@@ -168,10 +164,7 @@ func (n *Node) sendReadRequest(key string, node NodeData, successCount *int, mut
 	// ERRORS WHILE PROCESSING VS FAILED NODES? will it actually make sense for the coordinator to retry when there are
 	// errors or should it immediately return an error to the client? note: this applies to both read and write requests
 
-	mutex.Lock()
-	*successCount++
-	mutex.Unlock()
-	return c, nil
+	// internal error 500 for error while processing; failed node no response -- timeout
 }
 
 func (n *Node) sendReadRequests(key string, nodes [REPLICATION_FACTOR]NodeData) {
@@ -179,7 +172,7 @@ func (n *Node) sendReadRequests(key string, nodes [REPLICATION_FACTOR]NodeData) 
 	successfulReadCount := 0
 
 	for _, node := range nodes {
-		go n.sendReadRequest(key, node, &successfulReadCount, coordReadReqMutex)
+		go n.sendReadRequest(key, node, &successfulReadCount, &coordReadReqMutex)
 	}
 
 	// TODO: ADD CHANNEL HERE TO DETECT TIMEOUT
@@ -190,66 +183,6 @@ func (n *Node) sendReadRequests(key string, nodes [REPLICATION_FACTOR]NodeData) 
 		}
 		coordReadReqMutex.Unlock()
 	}
-}
-
-func (n *Node) handleUpdate(w http.ResponseWriter, r *http.Request) {
-	// Get object from body
-	var object ClientCart
-	body, _ := ioutil.ReadAll(r.Body)
-	defer r.Body.Close()
-
-	err := json.Unmarshal(body, &object)
-	if err != nil {
-		log.Println("Error:", err)
-		// Send error response to client
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"result": "error: request body could not be parsed"})
-	}
-	fmt.Println(object)
-
-	// Get position of object on ring
-	pos := HashMD5(object.UserID)
-	fmt.Printf("Position: %d\n", pos)
-
-	// Get nodes that should store this object
-	responsibleNodes := n.GetResponsibleNodes(pos)
-	fmt.Printf("Responsible nodes: %v\n", responsibleNodes)
-
-	// Send write requests
-	n.sendWriteRequests(object, responsibleNodes)
-
-	// Send response to client
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"result": "ok"})
-}
-
-func (n *Node) handleGet(w http.ResponseWriter, r *http.Request) {
-	// Get key from query parameters
-	query := r.URL.Query()
-	key, ok := query["key"] // key is of type []string but we should only be expecting 1 value
-	if !ok {
-		log.Printf("Error: Key is not specified")
-		// Send error response to client
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"result": "error: query key was not specified"})
-	}
-	fmt.Printf("%v\n", query)
-
-	// Get position of key on ring
-	pos := HashMD5(key[0])
-	fmt.Printf("Position: %d\n", pos)
-
-	// Get nodes that should store this object
-	responsibleNodes := n.GetResponsibleNodes(pos)
-	fmt.Printf("Responsible nodes: %v\n", responsibleNodes)
-
-	// Send read requests
-	n.sendReadRequests(key[0], responsibleNodes)
-	fmt.Println("yes done sending requests")
-
-	// Send response to client
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"result": "ok"})
 }
 
 // ==========END COORDINATOR FUNCTIONS==========

@@ -4,7 +4,7 @@ import "fmt"
 
 const (
 	NUM_RING_POSITIONS int    = 100
-	REPLICATION_FACTOR int    = 1 // increase replication factor after base features are completed
+	REPLICATION_FACTOR int    = 3 // increase replication factor after base features are completed
 	MIN_READ_SUCCESS   int    = 2
 	MIN_WRITE_SUCCESS  int    = 2
 	BASE_URL           string = "http://127.0.0.1"
@@ -37,3 +37,10 @@ var TEMP_NODE_MAP NodeMap = NodeMap{
 		Position: 12,
 	},
 }
+
+type STATUS_TYPE int
+
+const (
+	FAIL STATUS_TYPE = iota
+	SUCCESS
+)
