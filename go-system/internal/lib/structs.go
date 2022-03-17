@@ -31,17 +31,10 @@ type Message struct {
 	itemObject map[int]ItemObject
 }
 
-//Domain Object 
+//Domain Object
 type ClientCart struct {
 	UserID      string
 	Item        map[int]ItemObject
-	VectorClock []int
-}
-
-//Need to create a Data Transfer Object
-type ClientCartDTO struct {
-	UserID      string
-	Item        ItemObject
 	VectorClock []int
 }
 
