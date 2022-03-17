@@ -18,16 +18,16 @@ Read will obtain information from UserID.
 */
 
 func (n *Node) handleWriteRequest(w http.ResponseWriter, r *http.Request) {
-	var dao ClientCartDTO
+	var c ClientCart
 	body, _ := ioutil.ReadAll(r.Body)
-	err := json.Unmarshal(body, &dao)
+	err := json.Unmarshal(body, &c)
 	fmt.Println(err)
 
-	hashKey := HashMD5(dao.UserID) % 10
+	hashKey := HashMD5(c.UserID) % 10
 	responsibleNodes := n.GetResponsibleNodes(hashKey)
 	var coordWriteReqMutex sync.Mutex
 	successfulWriteCount := 0
-	go n.sendWriteRequest(dao, responsibleNodes[0], &successfulWriteCount, coordWriteReqMutex)
+	go n.sendWriteRequest(c, responsibleNodes[0], &successfulWriteCount, coordWriteReqMutex)
 
 	for {
 		coordWriteReqMutex.Lock()
@@ -36,7 +36,7 @@ func (n *Node) handleWriteRequest(w http.ResponseWriter, r *http.Request) {
 		}
 		coordWriteReqMutex.Unlock()
 	}
-	fmt.Println("Write request success for user id:", dao.UserID)
+	fmt.Println("Write request success for user id:", c.UserID)
 
 	// writeRequestMessage := Message{
 	// 	Id:         1,
@@ -105,7 +105,7 @@ func handleMessage2(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Endpoint Hit: homePage2")
 }
 
-func (n *Node) sendWriteRequest(dto ClientCartDTO, node NodeData, successCount *int, mutex sync.Mutex) {
+func (n *Node) sendWriteRequest(dto ClientCart, node NodeData, successCount *int, mutex sync.Mutex) {
 	jsonData, _ := json.Marshal(dto) // TODO ensure that the write API calls the correct node IP
 	resp, err := http.Post(fmt.Sprintf("%s/write", node.Ip), "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
@@ -124,7 +124,7 @@ func (n *Node) sendWriteRequest(dto ClientCartDTO, node NodeData, successCount *
 	mutex.Unlock()
 }
 
-func (n *Node) sendWriteRequests(object ClientCartDTO, nodes [REPLICATION_FACTOR]NodeData) {
+func (n *Node) sendWriteRequests(object ClientCart, nodes [REPLICATION_FACTOR]NodeData) {
 	var coordWriteReqMutex sync.Mutex
 	successfulWriteCount := 0
 
@@ -194,7 +194,7 @@ func (n *Node) sendReadRequests(key string, nodes [REPLICATION_FACTOR]NodeData) 
 
 func (n *Node) handleUpdate(w http.ResponseWriter, r *http.Request) {
 	// Get object from body
-	var object ClientCartDTO
+	var object ClientCart
 	body, _ := ioutil.ReadAll(r.Body)
 	defer r.Body.Close()
 

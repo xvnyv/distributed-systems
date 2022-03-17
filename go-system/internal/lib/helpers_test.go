@@ -12,7 +12,6 @@ func TestHashMD5(t *testing.T) {
 	}
 }
 
-
 func TestDataObjectIsEqual(t *testing.T) {
 	var testData ClientCart = ClientCart{
 		UserID: "hello",
