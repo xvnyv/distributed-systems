@@ -5,6 +5,7 @@ import (
 	"log"
 	"math/big"
 	"sort"
+	"sync"
 )
 
 /*
@@ -49,6 +50,77 @@ func (n *Node) GetResponsibleNodes(keyPos int) [REPLICATION_FACTOR]NodeData {
 		responsibleNodes[i] = n.NodeMap[posArr[(firstNodePosIndex+i)%len(posArr)]]
 	}
 	return responsibleNodes
+}
+
+func DetermineSuccess(requestType RequestType, respChannel <-chan ChannelResp, coordMutex *sync.Mutex) (bool, map[int]APIResp) {
+	// As long as (REPLICATION_FACTOR - MIN_WRITE_SUCCESS + 1) nodes fail, we return an error to the client
+	// It does not matter if 1 node has already successfully written to disk even if the entire operation fails
+	// We let the client execute a read before retrying the write to handle that case
+	// Inspired by DynamoDB: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Programming.Errors.html
+
+	successResps := map[int]APIResp{}
+	failResps := map[int]APIResp{}
+	var wg sync.WaitGroup
+	var minSuccessCount int
+
+	if requestType == READ {
+		minSuccessCount = MIN_READ_SUCCESS
+	} else {
+		minSuccessCount = MIN_WRITE_SUCCESS
+	}
+
+	wg.Add(minSuccessCount)
+
+	go func(successes map[int]APIResp, fails map[int]APIResp) {
+	Loop:
+		for {
+			select {
+			case resp := <-respChannel:
+				coordMutex.Lock()
+				if resp.APIResp.Status == SUCCESS {
+					log.Printf("Successful operation for request type %v\n", requestType)
+					successes[resp.From] = resp.APIResp
+					if len(successes) <= minSuccessCount {
+						wg.Done()
+					}
+				} else {
+					fails[resp.From] = resp.APIResp
+					if len(fails) >= REPLICATION_FACTOR-minSuccessCount+1 {
+						// too many nodes have failed -- return error to client
+						log.Printf("Failed operation for request type %v\n", requestType)
+						for i := 0; i < (minSuccessCount - len(successes)); i++ {
+							wg.Done()
+						}
+						defer coordMutex.Unlock()
+						break Loop
+					}
+				}
+				if (len(successes) + len(fails)) == REPLICATION_FACTOR {
+					// defer mutex unlock so that when we break out of this loop,
+					// mutex will still be unlocked once the function returns
+					defer coordMutex.Unlock()
+					break Loop
+				}
+				coordMutex.Unlock()
+
+				// TODO: ADD CHANNEL HERE TO DETECT TIMEOUT
+				// IF DID NOT HIT minSuccessCount, THEN WE SEND AN ERROR TO THE CLIENT
+				// IF minSuccessCount IS HIT BUT NODES TIMED OUT, SEND HINTED HANDOFF
+
+				// TODO: actually, we will need to determine how we are going to simulate failed nodes
+				// will we get an error while sending the API request like connection rejected?
+				// or will the nodes simply not respond?
+			}
+		}
+	}(successResps, failResps)
+
+	wg.Wait()
+	coordMutex.Lock()
+	defer coordMutex.Unlock()
+	if len(successResps) >= minSuccessCount {
+		return true, successResps
+	}
+	return false, failResps
 }
 
 func OrderedIntArrayEqual(a, b []int) bool {

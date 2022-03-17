@@ -51,6 +51,18 @@ type APIResp struct {
 	Error  string
 }
 
+type ChannelResp struct {
+	From    int // node ID
+	APIResp APIResp
+}
+
+type RequestType int
+
+const (
+	READ RequestType = iota
+	WRITE
+)
+
 const (
 	WriteRequest MessageType = iota //Object with optional vector clock
 	ReadRequest                     //Key, Maybe need vector clock
