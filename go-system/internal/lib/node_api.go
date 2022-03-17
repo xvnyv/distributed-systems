@@ -29,29 +29,17 @@ func (n *Node) FulfilReadRequest(w http.ResponseWriter, r *http.Request) {
 	// TODO retrieve user items from badger DB
 	clientCart, err := n.BadgerRead(userId)
 	if err != nil {
+		w.WriteHeader(404)
 		log.Panic(err.Error())
 	}
-	// am going to hardcode the response for now since no integration to badger yet
-	if userId == "123" {
-		w.WriteHeader(200)
-		w.Header().Set("Content-Type", "application/json")
-		// var itemObj ItemObject = ItemObject{
-		// 	Id:       1,
-		// 	Name:     "Pen",
-		// 	Quantity: 44,
-		// }
 
-		// var testData ClientCartDTO = ClientCartDTO{
-		// 	UserID:      "hello",
-		// 	Item:        itemObj,
-		// 	VectorClock: []int{1, 0, 234, 347, 2, 34, 6, 6, 235, 7},
-		// }
-		jsonResp, err := json.Marshal(clientCart)
-		if err != nil {
-			log.Fatalf("Error happened in JSON marshal. Err: %s", err)
-		}
-		w.Write(jsonResp)
-		return
+	// am going to hardcode the response for now since no integration to badger yet
+	w.WriteHeader(200)
+	w.Header().Set("Content-Type", "application/json")
+
+	jsonResp, err := json.Marshal(clientCart)
+	if err != nil {
+		log.Fatalf("Error happened in JSON marshal. Err: %s", err)
 	}
-	w.WriteHeader(404)
+	w.Write(jsonResp)
 }
