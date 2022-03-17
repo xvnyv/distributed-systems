@@ -23,11 +23,11 @@ func (n *Node) BadgerWrite(o []DataObject) error {
 		err = db.Update(func(txn *badger.Txn) error {
 			//need convert DataObject to byte array
 			//forloop
-			if v.Key == "" {
+			if v.UserID == "" {
 				fmt.Println(v)
 			}
 			dataObjectBytes, _ := json.Marshal(v)
-			err := txn.Set([]byte(v.Key), dataObjectBytes)
+			err := txn.Set([]byte(v.UserID), dataObjectBytes)
 			if err != nil {
 				return err
 			}
