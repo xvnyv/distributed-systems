@@ -2,7 +2,7 @@ package lib
 
 import (
 	"crypto/md5"
-	"fmt"
+	"log"
 	"math/big"
 	"sort"
 )
@@ -22,19 +22,6 @@ func HashMD5(s string) int {
 	return int(ringPosBigInt.Mod(hashedBigInt, maxRingPosBigInt).Uint64())
 }
 
-// // Function to allocate the given UserID to a node and return that nodeData and keyHash
-// func (n *Node) AllocateKey(key string) (NodeData, string) {
-// 	// nodeMap := ringServer.Ring.RingNodeDataMap
-// 	hashKey := HashMD5(key)
-// 	fmt.Printf("this is the hash below: \n")
-// 	fmt.Println(hashKey)
-
-// 	nodeId := hashKey % 10 //based on the hash generated, we will modulo it to find out which node will take responsibility.
-
-// 	// to do: replication is not accounted for, need to send to other nodes also in case node down.
-// 	return n.NodeMap[nodeId], strconv.Itoa(hashKey)
-// }
-
 func (n *Node) GetResponsibleNodes(keyPos int) [REPLICATION_FACTOR]NodeData {
 	posArr := []int{}
 
@@ -43,12 +30,13 @@ func (n *Node) GetResponsibleNodes(keyPos int) [REPLICATION_FACTOR]NodeData {
 	}
 
 	sort.Ints(posArr)
-	fmt.Printf("Key position: %d\n", keyPos)
+	log.Printf("Key position: %d\n", keyPos)
 	firstNodePosIndex := -1
 	for i, pos := range posArr {
+		// if the keyPos is 8, node 0 is at pos 0 and node 1 is at pos 12, the first node index should be 1
 		if keyPos <= pos {
-			fmt.Printf("First node position: %d\n", pos)
-			firstNodePosIndex = i - 1 // idk if this is correct?? If the keyPos is 8, then its between 0 and 12 position. So the i should be 0 instead of 1?
+			log.Printf("First node position: %d\n", pos)
+			firstNodePosIndex = i
 			break
 		}
 	}
@@ -62,7 +50,6 @@ func (n *Node) GetResponsibleNodes(keyPos int) [REPLICATION_FACTOR]NodeData {
 	}
 	return responsibleNodes
 }
-
 
 func OrderedIntArrayEqual(a, b []int) bool {
 	if len(a) != len(b) {
@@ -109,7 +96,6 @@ func UnorderedStringArrayEqual(a, b []string) bool {
 	return true
 
 }
-
 
 func (o *ClientCart) IsEqual(b ClientCart) bool {
 	if o.UserID != b.UserID {

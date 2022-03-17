@@ -48,7 +48,7 @@ type APIResp struct {
 	//standard API response
 	Status STATUS_TYPE
 	Data   ClientCart //json
-	Error  error
+	Error  string
 }
 
 const (

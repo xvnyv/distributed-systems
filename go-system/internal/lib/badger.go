@@ -14,7 +14,7 @@ func (n *Node) BadgerWrite(o []ClientCart) error {
 
 	db, err := badger.Open(opts)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Badger Error: %v\n", err)
 		return err
 	}
 	defer db.Close()
@@ -24,7 +24,7 @@ func (n *Node) BadgerWrite(o []ClientCart) error {
 			//need convert DataObject to byte array
 			//forloop
 			if v.UserID == "" {
-				fmt.Println(v)
+				log.Println("No UserId. Object is:", v)
 			}
 			dataObjectBytes, _ := json.Marshal(v)
 			err := txn.Set([]byte(v.UserID), dataObjectBytes)
@@ -49,7 +49,7 @@ func (n *Node) BadgerRead(key string) (ClientCart, error) {
 
 	db, err := badger.Open(opts)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Badger Error: %v\n", err)
 		return ClientCart{}, err
 	}
 	defer db.Close()
@@ -94,7 +94,7 @@ func (n *Node) BadgerDelete(keys []string) error {
 
 	db, err := badger.Open(opts)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Badger Error: %v\n", err)
 		return err
 	}
 	defer db.Close()
