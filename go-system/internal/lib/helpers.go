@@ -109,7 +109,7 @@ func UnorderedStringArrayEqual(a, b []string) bool {
 
 }
 
-func (o *DataObject) IsEqual(b DataObject) bool {
+func (o *ClientCart) IsEqual(b ClientCart) bool {
 	if o.UserID != b.UserID {
 		return false
 	}

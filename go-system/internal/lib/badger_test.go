@@ -13,13 +13,17 @@ var itemObj ItemObject = ItemObject{
 	Quantity: 44,
 }
 
-var testData DataObject = DataObject{
-	UserID:      "hello",
-	Item:        itemObj,
+var testData ClientCart = ClientCart{
+	UserID: "hello",
+	Item: map[int]ItemObject{1: {
+		Id:       1,
+		Name:     "shift",
+		Quantity: 1,
+	}},
 	VectorClock: []int{1, 0, 234, 347, 2, 34, 6, 6, 235, 7},
 }
 
-var testDataArray = []DataObject{testData}
+var testDataArray = []ClientCart{testData}
 
 var keylst []string = make([]string, 0)
 
@@ -50,11 +54,15 @@ func TestBadgerReadWriteDelete(t *testing.T) {
 func TestBadgerGetKeys(t *testing.T) {
 	numberOfTestObjects := 100
 
-	dataObjectlst := make([]DataObject, 0)
+	dataObjectlst := make([]ClientCart, 0)
 	for i := 0; i < numberOfTestObjects; i++ {
-		tempObject := DataObject{
+		tempObject := ClientCart{
 			UserID:      "adsfh" + strconv.Itoa(i),
-			Item:        itemObj,
+			Item:         map[int]ItemObject{1: {
+				Id:       1,
+				Name:     "shift",
+				Quantity: 1,
+			}},
 			VectorClock: []int{i, i, i, i, i, i, i, i},
 		}
 		keylst = append(keylst, tempObject.UserID)

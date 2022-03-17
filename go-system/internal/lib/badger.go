@@ -8,7 +8,7 @@ import (
 	badger "github.com/dgraph-io/badger/v3"
 )
 
-func (n *Node) BadgerWrite(o []DataObject) error {
+func (n *Node) BadgerWrite(o []ClientCart) error {
 	opts := badger.DefaultOptions(fmt.Sprintf("tmp/%v/badger", n.Id))
 	opts.Logger = nil
 
@@ -43,19 +43,19 @@ func (n *Node) BadgerWrite(o []DataObject) error {
 /**
 Returns empty DataObject if there is an error reading from the database with the provided key.
 */
-func (n *Node) BadgerRead(key string) (DataObject, error) {
+func (n *Node) BadgerRead(key string) (ClientCart, error) {
 	opts := badger.DefaultOptions(fmt.Sprintf("tmp/%v/badger", n.Id))
 	opts.Logger = nil
 
 	db, err := badger.Open(opts)
 	if err != nil {
 		log.Fatal(err)
-		return DataObject{}, err
+		return ClientCart{}, err
 	}
 	defer db.Close()
 	// Your code here…
 
-	res := DataObject{}
+	res := ClientCart{}
 	err = db.View(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte(key))
 		if err != nil {

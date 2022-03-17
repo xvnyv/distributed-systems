@@ -8,7 +8,7 @@ import (
 )
 
 func (n *Node) FulfilWriteRequest(w http.ResponseWriter, r *http.Request) {
-	var dao DataObject
+	var dao ClientCart
 	body, _ := ioutil.ReadAll(r.Body)
 	err := json.Unmarshal(body, &dao)
 	fmt.Println(dao)

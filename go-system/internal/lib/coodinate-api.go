@@ -18,7 +18,7 @@ Read will obtain information from UserID.
 */
 
 func (n *Node) handleWriteRequest(w http.ResponseWriter, r *http.Request) {
-	var dao DataObject
+	var dao ClientCartDTO
 	body, _ := ioutil.ReadAll(r.Body)
 	err := json.Unmarshal(body, &dao)
 	fmt.Println(err)
@@ -105,7 +105,7 @@ func handleMessage2(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Endpoint Hit: homePage2")
 }
 
-func (n *Node) sendWriteRequest(dao DataObject, node NodeData, successCount *int, mutex sync.Mutex) {
+func (n *Node) sendWriteRequest(dao ClientCartDTO, node NodeData, successCount *int, mutex sync.Mutex) {
 	jsonData, _ := json.Marshal(dao)
 	resp, err := http.Post(fmt.Sprintf("%s/write", node.Ip), "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
@@ -124,7 +124,7 @@ func (n *Node) sendWriteRequest(dao DataObject, node NodeData, successCount *int
 	mutex.Unlock()
 }
 
-func (n *Node) sendWriteRequests(object DataObject, nodes [REPLICATION_FACTOR]NodeData) {
+func (n *Node) sendWriteRequests(object ClientCartDTO, nodes [REPLICATION_FACTOR]NodeData) {
 	var coordWriteReqMutex sync.Mutex
 	successfulWriteCount := 0
 
@@ -142,7 +142,7 @@ func (n *Node) sendWriteRequests(object DataObject, nodes [REPLICATION_FACTOR]No
 	}
 }
 
-func (n *Node) sendReadRequest(key string, node NodeData, successCount *int, mutex sync.Mutex) (DataObject, error) {
+func (n *Node) sendReadRequest(key string, node NodeData, successCount *int, mutex sync.Mutex) (ClientCartDTO, error) {
 	// Add key to query params
 	base, _ := url.Parse(fmt.Sprintf("%s/read", node.Ip))
 	params := url.Values{}
@@ -150,7 +150,7 @@ func (n *Node) sendReadRequest(key string, node NodeData, successCount *int, mut
 	fmt.Println(params)
 	base.RawQuery = params.Encode()
 
-	var dao DataObject
+	var dao ClientCartDTO
 
 	// Send read request to node
 	res, err := http.Get(base.String())
@@ -198,7 +198,7 @@ func (n *Node) sendReadRequests(key string, nodes [REPLICATION_FACTOR]NodeData) 
 
 func (n *Node) handleUpdate(w http.ResponseWriter, r *http.Request) {
 	// Get object from body
-	var object DataObject
+	var object ClientCartDTO
 	body, _ := ioutil.ReadAll(r.Body)
 	defer r.Body.Close()
 
