@@ -142,24 +142,24 @@ func (n *Node) sendWriteRequests(object ClientCart, nodes [REPLICATION_FACTOR]No
 	}
 }
 
-func (n *Node) sendReadRequest(key string, node NodeData, successCount *int, mutex sync.Mutex) (ClientCartDTO, error) {
+func (n *Node) sendReadRequest(key string, node NodeData, successCount *int, mutex sync.Mutex) (ClientCart, error) {
 	// Add key to query params
 	base, _ := url.Parse(fmt.Sprintf("%s/read?id=%s", node.Ip, key)) // key = userID
 
-	var dao ClientCartDTO
+	var c ClientCart
 
 	// Send read request to node
 	res, err := http.Get(base.String())
 	if err != nil {
 		log.Println("Error: ", err)
-		return dao, err
+		return c, err
 	}
 
 	// TODO: DECIDE ON SCHEMA FOR RESPONSE DATA
 	defer res.Body.Close()
 	body, _ := io.ReadAll(res.Body)
 	fmt.Println("Read request response body:", body)
-	decodeError := json.Unmarshal(body, &dao)
+	decodeError := json.Unmarshal(body, &c)
 	fmt.Println(decodeError)
 
 	// TODO: HANDLE FAILURE TIMEOUT SCENARIO
@@ -171,7 +171,7 @@ func (n *Node) sendReadRequest(key string, node NodeData, successCount *int, mut
 	mutex.Lock()
 	*successCount++
 	mutex.Unlock()
-	return dao, nil
+	return c, nil
 }
 
 func (n *Node) sendReadRequests(key string, nodes [REPLICATION_FACTOR]NodeData) {
