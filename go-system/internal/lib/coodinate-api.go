@@ -105,8 +105,8 @@ func handleMessage2(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Endpoint Hit: homePage2")
 }
 
-func (n *Node) sendWriteRequest(dao ClientCartDTO, node NodeData, successCount *int, mutex sync.Mutex) {
-	jsonData, _ := json.Marshal(dao)
+func (n *Node) sendWriteRequest(dto ClientCartDTO, node NodeData, successCount *int, mutex sync.Mutex) {
+	jsonData, _ := json.Marshal(dto) // TODO ensure that the write API calls the correct node IP
 	resp, err := http.Post(fmt.Sprintf("%s/write", node.Ip), "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		log.Println("Error: ", err)
@@ -144,11 +144,7 @@ func (n *Node) sendWriteRequests(object ClientCartDTO, nodes [REPLICATION_FACTOR
 
 func (n *Node) sendReadRequest(key string, node NodeData, successCount *int, mutex sync.Mutex) (ClientCartDTO, error) {
 	// Add key to query params
-	base, _ := url.Parse(fmt.Sprintf("%s/read", node.Ip))
-	params := url.Values{}
-	params.Add("key", key)
-	fmt.Println(params)
-	base.RawQuery = params.Encode()
+	base, _ := url.Parse(fmt.Sprintf("%s/read?id=%s", node.Ip, key)) // key = userID
 
 	var dao ClientCartDTO
 
@@ -272,7 +268,7 @@ func (n *Node) HandleRequests() {
 	// http.HandleFunc("/handover-success", handleMessage2)
 
 	// http.HandleFunc("/update", handleMessage2)
-	http.HandleFunc("/get", n.FulfilReadRequest)
+	http.HandleFunc("/read", n.FulfilReadRequest)
 	http.HandleFunc("/write", n.FulfilWriteRequest)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", n.Port), nil))
 }

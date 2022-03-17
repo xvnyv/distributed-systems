@@ -48,7 +48,7 @@ func (n *Node) GetResponsibleNodes(keyPos int) [REPLICATION_FACTOR]NodeData {
 	for i, pos := range posArr {
 		if keyPos <= pos {
 			fmt.Printf("First node position: %d\n", pos)
-			firstNodePosIndex = i
+			firstNodePosIndex = i - 1 // idk if this is correct?? If the keyPos is 8, then its between 0 and 12 position. So the i should be 0 instead of 1?
 			break
 		}
 	}
