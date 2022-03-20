@@ -10,6 +10,7 @@ import (
 
 func main() {
 	/* go run main.go -id=<id> -port=<port number> -first=<is-first-node> */
+	/* -id is set to 0-4, port number ranges from 8000-8004, and -first is true only for the first node indicated */
 
 	idFlagPtr := flag.Int("id", -1, "Node ID")
 	portFlagPtr := flag.Int("port", 8000, "Port number")
