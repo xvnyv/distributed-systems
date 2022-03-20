@@ -3,32 +3,65 @@ package lib
 type MessageType int
 
 type NodeData struct {
+	Id       int
+	Ip       string
+	Port     int
+	Position int
+}
+
+type NodeMap map[int]NodeData //int refers to position in the ring
+
+type Node struct {
 	Id           int
 	Ip           string
+	Port         int
 	Position     int
-	NodeMap      map[int]NodeData //int refers to position in the ring
+	NodeMap      NodeMap
 	Successors   []int
 	Predecessors []int
 }
 
-type NodeMap struct {
-}
-
 type Message struct {
-	Id       int
-	Sender   int
-	Receiver int
-	Type     MessageType
-	Content  string
-	MetaData string // may contain intented receiver
+	Id         int
+	Sender     int
+	Receiver   int
+	Type       MessageType
+	Content    string
+	MetaData   string // may contain intended receiver
+	itemObject map[int]ItemObject
 }
 
-type DataObject struct {
-	//the thing we store
-	Key         string `json: key`
-	Value       string `json: value` //base64
-	VectorClock []int  `json: context`
+//Domain Object
+type ClientCart struct {
+	UserID      string
+	Item        map[int]ItemObject
+	VectorClock []int
 }
+
+type ItemObject struct {
+	Id       int
+	Name     string
+	Quantity int
+}
+
+type APIResp struct {
+	//standard API response
+	Status STATUS_TYPE
+	Data   ClientCart //json
+	Error  string
+}
+
+type ChannelResp struct {
+	From    int // node ID
+	APIResp APIResp
+}
+
+type RequestType int
+
+const (
+	READ RequestType = iota
+	WRITE
+)
 
 const (
 	WriteRequest MessageType = iota //Object with optional vector clock
