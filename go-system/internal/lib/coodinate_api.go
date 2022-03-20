@@ -65,8 +65,10 @@ func (n *Node) handleWriteRequest(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Handle Write Request Error: %v\n", err)
 		return
 	}
+	log.Printf("Input: %s\n", c.UserID)
 	hashKey := HashMD5(c.UserID)
 	responsibleNodes := n.GetResponsibleNodes(hashKey)
+	log.Printf("Responsible nodes: %+v", responsibleNodes)
 
 	// TODO: Vector clock updates should be done by the individual writing nodes
 	// Coordinator info should be sent to the writing nodes so that they can update the
@@ -150,8 +152,11 @@ func (n *Node) handleReadRequest(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	userId := query.Get("id")
 
+	log.Printf("Input: %s\n", userId)
 	pos := HashMD5(userId)
 	responsibleNodes := n.GetResponsibleNodes(pos)
+	log.Printf("Responsible nodes: %+v", responsibleNodes)
+
 	var coordMutex sync.Mutex
 	success, resps := n.sendReadRequests(userId, responsibleNodes, &coordMutex)
 
