@@ -13,9 +13,9 @@ func TestHashMD5(t *testing.T) {
 }
 
 func TestDataObjectIsEqual(t *testing.T) {
-	var testData DataObject = DataObject{
-		Key:         "hello",
-		Value:       "world",
+	var testData ClientCart = ClientCart{
+		UserID: "hello",
+		// Value:       "world",
 		VectorClock: []int{1, 0, 234, 347, 2, 34, 6, 6, 235, 7},
 	}
 

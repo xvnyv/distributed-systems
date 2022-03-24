@@ -8,13 +8,13 @@ import (
 	badger "github.com/dgraph-io/badger/v3"
 )
 
-func (n *Node) BadgerWrite(o []DataObject) error {
+func (n *Node) BadgerWrite(o []ClientCart) error {
 	opts := badger.DefaultOptions(fmt.Sprintf("tmp/%v/badger", n.Id))
 	opts.Logger = nil
 
 	db, err := badger.Open(opts)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Badger Error: %v\n", err)
 		return err
 	}
 	defer db.Close()
@@ -23,11 +23,11 @@ func (n *Node) BadgerWrite(o []DataObject) error {
 		err = db.Update(func(txn *badger.Txn) error {
 			//need convert DataObject to byte array
 			//forloop
-			if v.Key == "" {
-				fmt.Println(v)
+			if v.UserID == "" {
+				log.Println("No UserId. Object is:", v)
 			}
 			dataObjectBytes, _ := json.Marshal(v)
-			err := txn.Set([]byte(v.Key), dataObjectBytes)
+			err := txn.Set([]byte(v.UserID), dataObjectBytes)
 			if err != nil {
 				return err
 			}
@@ -43,19 +43,19 @@ func (n *Node) BadgerWrite(o []DataObject) error {
 /**
 Returns empty DataObject if there is an error reading from the database with the provided key.
 */
-func (n *Node) BadgerRead(key string) (DataObject, error) {
+func (n *Node) BadgerRead(key string) (ClientCart, error) {
 	opts := badger.DefaultOptions(fmt.Sprintf("tmp/%v/badger", n.Id))
 	opts.Logger = nil
 
 	db, err := badger.Open(opts)
 	if err != nil {
-		log.Fatal(err)
-		return DataObject{}, err
+		log.Printf("Badger Error: %v\n", err)
+		return ClientCart{}, err
 	}
 	defer db.Close()
 	// Your code here…
 
-	res := DataObject{}
+	res := ClientCart{}
 	err = db.View(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte(key))
 		if err != nil {
@@ -94,7 +94,7 @@ func (n *Node) BadgerDelete(keys []string) error {
 
 	db, err := badger.Open(opts)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Badger Error: %v\n", err)
 		return err
 	}
 	defer db.Close()

@@ -5,6 +5,7 @@ type MessageType int
 type NodeData struct {
 	Id       int
 	Ip       string
+	Port     int
 	Position int
 }
 
@@ -21,20 +22,46 @@ type Node struct {
 }
 
 type Message struct {
-	Id       int
-	Sender   int
-	Receiver int
-	Type     MessageType
-	Content  string
-	MetaData string // may contain intended receiver
+	Id         int
+	Sender     int
+	Receiver   int
+	Type       MessageType
+	Content    string
+	MetaData   string // may contain intended receiver
+	itemObject map[int]ItemObject
 }
 
-type DataObject struct {
-	//the thing we store
-	Key         string
-	Value       string //base64
+//Domain Object
+type ClientCart struct {
+	UserID      string
+	Item        map[int]ItemObject
 	VectorClock []int
 }
+
+type ItemObject struct {
+	Id       int
+	Name     string
+	Quantity int
+}
+
+type APIResp struct {
+	//standard API response
+	Status STATUS_TYPE
+	Data   ClientCart //json
+	Error  string
+}
+
+type ChannelResp struct {
+	From    int // node ID
+	APIResp APIResp
+}
+
+type RequestType int
+
+const (
+	READ RequestType = iota
+	WRITE
+)
 
 const (
 	WriteRequest MessageType = iota //Object with optional vector clock
