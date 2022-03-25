@@ -17,6 +17,7 @@ type Node struct {
 	Port         int
 	Position     int
 	NodeMap      NodeMap
+	MessageQueue []Message
 	Successors   []int
 	Predecessors []int
 }

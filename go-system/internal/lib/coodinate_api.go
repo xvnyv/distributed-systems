@@ -89,6 +89,13 @@ func (n *Node) handleWriteRequest(w http.ResponseWriter, r *http.Request) {
 	} else {
 		c.VectorClock[n.Id]++
 	}
+	// before we send this write request, we have to send the messages in hinted Queue first
+
+	// just have a universal Message queue
+	// At the start, we pop head of queue and sendWriteRequest
+	// if !success, then append to end of queue
+	// iterate through the steps
+	// have a counter to check length of queue and no. of iterations to prevent infinite loop
 
 	var coordMutex sync.Mutex
 	success, resps := n.sendWriteRequests(c, responsibleNodes, &coordMutex)
@@ -97,6 +104,8 @@ func (n *Node) handleWriteRequest(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(201)
 	} else {
 		w.WriteHeader(500)
+		// TODO store a hint indicates that a write needs to be replayed to one or more unavailable nodes
+
 	}
 	w.Header().Set("Content-Type", "application/json")
 	coordMutex.Lock()
