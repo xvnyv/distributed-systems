@@ -12,48 +12,19 @@ import { PhoneIcon, AddIcon, WarningIcon, MinusIcon } from "@chakra-ui/icons";
 
 import { useReducer, useEffect } from "react";
 
-var sampleItemsArray = {
-  1: {
-    id: 1,
-    Name: "pencil",
-    Quantity: 2,
-  },
-  3: {
-    id: 3,
-    Name: "paper",
-    Quantity: 1,
-  },
-};
+import {reducer, ACTION_TYPES} from "../reducers/ItemReducer";
 
-const ACTION_TYPES = {
-  INCREMENT_ITEM: "incItem",
-  DECREMENT_ITEM: "decItem",
-  ADD_ITEM: "addItem",
-};
 
-const reducer = (state, action) => {
-  switch (action.type) {
-    case ACTION_TYPES.INCREMENT_ITEM:
-      var id = action.payload;
-      return {
-        ...state,
-        [id]: { ...state[id], Quantity: state[id].Quantity + 1 },
-      };
-    case ACTION_TYPES.DECREMENT_ITEM:
-      var id = action.payload;
-      if (state[id].Quantity === 0) return state;
-      return {
-        ...state,
-        [id]: { ...state[id], Quantity: state[id].Quantity - 1 },
-      };
-  }
-};
 
-const CTable = (itemArray) => {
-  var items =
-    Object.keys(itemArray).length === 0 ? sampleItemsArray : itemArray;
 
-  const [state, dispatch] = useReducer(reducer, items);
+
+
+
+
+const CTable = ({state, dispatch}) => {
+
+  console.log(state)
+  console.log(dispatch)
   var itemIds = Object.keys(state);
   var itemAttributes = Object.keys(state[itemIds[0]]);
   const itemAdd = (id) => {
