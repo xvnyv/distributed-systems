@@ -18,14 +18,18 @@ import React, { useState } from "react";
 import { ITEM_ACTIONS } from "../reducers/ItemReducer";
 
 const CAddItemModal = ({ state, dispatch }) => {
+  // to control state of modal
   const { isOpen, onOpen, onClose } = useDisclosure();
 
+  // to remember the state of itemId and itemName to be created
   const [itemId, setItemId] = useState();
   const [itemName, setItemName] = useState();
 
+  //toast to provide feedback for wrong input or item already existing
   const toast = useToast();
   const toastIdRef = React.useRef();
 
+  // dispatching new item call if all validation passes
   const addItem = () => {
     if (itemId === "" || itemName === "") {
       toastIdRef.current = toast({
@@ -38,8 +42,8 @@ const CAddItemModal = ({ state, dispatch }) => {
       });
       return;
     }
-    if (typeof state[itemId] !== "undefined") {
-      console.log(state[itemId]);
+    if (typeof state.item[itemId] !== "undefined") {
+      console.log(state.item[itemId]);
       toastIdRef.current = toast({
         title: "Input Error",
         status: "error",
@@ -54,6 +58,7 @@ const CAddItemModal = ({ state, dispatch }) => {
     onClose();
   };
 
+  // add item if keypress == enter
   const CheckEnter = (e) => {
     if (e.key === "Enter") {
       addItem();
