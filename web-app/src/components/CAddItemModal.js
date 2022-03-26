@@ -13,10 +13,8 @@ import {
   Input,
 } from "@chakra-ui/react";
 
-import { PhoneIcon, AddIcon, WarningIcon } from "@chakra-ui/icons";
-
 import React, { useState } from "react";
-import { ACTION_TYPES } from "../reducers/ItemReducer";
+import { ITEM_ACTIONS } from "../reducers/ItemReducer";
 
 const CAddItemModal = ({ state, dispatch }) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -25,8 +23,14 @@ const CAddItemModal = ({ state, dispatch }) => {
   const [itemName, setItemName] = useState();
 
   const addItem = () => {
-    dispatch({type: ACTION_TYPES.ADD_ITEM, payload: {itemId, itemName}})
-    onClose()
+    dispatch({ type: ITEM_ACTIONS.NEW, payload: { itemId, itemName } });
+    onClose();
+  };
+
+  const CheckEnter = (e) => {
+    if (e.key === "Enter") {
+      addItem();
+    }
   };
 
   return (
@@ -57,6 +61,7 @@ const CAddItemModal = ({ state, dispatch }) => {
                 onChange={(e) => {
                   setItemName(e.target.value);
                 }}
+                onKeyPress={(e) => CheckEnter(e)}
                 placeholder="e.g, banana"
                 onSubmit={addItem}
               />
@@ -67,7 +72,9 @@ const CAddItemModal = ({ state, dispatch }) => {
             <Button colorScheme="blue" mr={3} onClick={addItem}>
               save
             </Button>
-            <Button variant="ghost" onClick={onClose}>cancel</Button>
+            <Button variant="ghost" onClick={onClose}>
+              cancel
+            </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>

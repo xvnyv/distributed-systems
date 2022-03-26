@@ -1,35 +1,36 @@
 export const reducer = (state, action) => {
   switch (action.type) {
-    case ACTION_TYPES.INCREMENT_ITEM:
+    case ITEM_ACTIONS.INCREMENT:
       var id = action.payload;
       return {
         ...state,
-        [id]: { ...state[id], Quantity: state[id].Quantity ++ },
+        [id]: { ...state[id], Quantity: state[id].Quantity++ },
       };
-    case ACTION_TYPES.DECREMENT_ITEM:
+    case ITEM_ACTIONS.DECREMENT:
       var id = action.payload;
-      if (state[id].Quantity === 0){
-        delete state[id];
-        return state    
-    } 
       return {
         ...state,
-        [id]: { ...state[id], Quantity: state[id].Quantity -- },
+        [id]: { ...state[id], Quantity: state[id].Quantity-- },
       };
-    case ACTION_TYPES.ADD_ITEM:
+    case ITEM_ACTIONS.NEW:
       return {
         ...state,
         [action.payload.itemId]: {
-          "id": action.payload.itemId,
-          "Name": action.payload.itemName,
-          "Quantity": 1,
+          id: action.payload.itemId,
+          Name: action.payload.itemName,
+          Quantity: 1,
         },
       };
+    case ITEM_ACTIONS.DELETE:
+      var id = action.payload;
+      delete state[id];
+      return state;
   }
 };
 
-export const ACTION_TYPES = {
-  INCREMENT_ITEM: "incItem",
-  DECREMENT_ITEM: "decItem",
-  ADD_ITEM: "addItem",
+export const ITEM_ACTIONS = {
+  INCREMENT: "incItem",
+  DECREMENT: "decItem",
+  NEW: "addItem",
+  DELETE: "delItem",
 };
