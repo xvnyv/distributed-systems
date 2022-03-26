@@ -18,7 +18,7 @@ const GetUserData = async (userId, dispatch) => {
       console.log(err);
       dispatch({
         type: ITEM_ACTIONS.CHANGE_USER,
-        payload: { UserID: userId, Item: {}, VectorClock: [0, 0, 0, 0, 0] },
+        payload: { UserID: userId, Item: {} },
       });
     });
   // const data = await res.json();

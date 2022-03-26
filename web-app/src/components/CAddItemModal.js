@@ -63,16 +63,6 @@ const CAddItemModal = ({ state, dispatch }) => {
     if (e.key === "Enter") {
       addItem();
     }
-    if (isNaN(e.key)) {
-      toastIdRef.current = toast({
-        title: "Input Error",
-        status: "warning",
-        description: "Item ID should be a number",
-        duration: 2000,
-        isClosable: true,
-        position: "top-left",
-      });
-    }
   };
   const CheckNumber = (e) => {
     if (isNaN(e.key)) {
@@ -113,8 +103,8 @@ const CAddItemModal = ({ state, dispatch }) => {
                   setItemId(e.target.value);
                 }}
                 onKeyPress={(e) => {
-                  CheckEnter(e);
                   CheckNumber(e);
+                  CheckEnter(e);
                 }}
                 placeholder="e.g, 6"
                 type="number"
