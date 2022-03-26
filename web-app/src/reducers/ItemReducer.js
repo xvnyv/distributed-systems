@@ -1,28 +1,37 @@
+import GetDataAxios from "../axios/GetData";
+
 export const reducer = (state, action) => {
   switch (action.type) {
     case ITEM_ACTIONS.INCREMENT:
       var id = action.payload;
+      console.log({
+        ...state,
+        Item: {
+          ...state.Item,
+          [id]: { ...state.Item[id], Quantity: state.Item[id].Quantity + 1 },
+        },
+      });
       return {
         ...state,
-        item: {
-          ...state.item,
-          [id]: { ...state.item[id], Quantity: state.item[id].Quantity++ },
+        Item: {
+          ...state.Item,
+          [id]: { ...state.Item[id], Quantity: state.Item[id].Quantity + 1 },
         },
       };
     case ITEM_ACTIONS.DECREMENT:
       var id = action.payload;
       return {
         ...state,
-        item: {
-          ...state.item,
-          [id]: { ...state.item[id], Quantity: state.item[id].Quantity-- },
+        Item: {
+          ...state.Item,
+          [id]: { ...state.Item[id], Quantity: state.Item[id].Quantity - 1 },
         },
       };
     case ITEM_ACTIONS.NEW:
       return {
         ...state,
-        item: {
-          ...state.item,
+        Item: {
+          ...state.Item,
           [action.payload.itemId]: {
             id: action.payload.itemId,
             Name: action.payload.itemName,
@@ -32,11 +41,10 @@ export const reducer = (state, action) => {
       };
     case ITEM_ACTIONS.DELETE:
       var id = action.payload;
-      delete state.item[id];
+      delete state.Item[id];
       return state;
     case ITEM_ACTIONS.CHANGE_USER:
-      // findUser(action.payload);
-      return state;
+      return action.payload;
   }
 };
 

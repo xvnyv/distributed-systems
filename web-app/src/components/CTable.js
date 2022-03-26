@@ -25,26 +25,25 @@ const CTable = ({ state, dispatch }) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const cancelRef = React.useRef();
   const [toDelete, setToDelete] = useState();
-
   //return empty cart if no items
-  if (Object.keys(state.item).length === 0) {
+  if (Object.keys(state).length === 0) {
     return (
       <Table variant="simple">
-        <TableCaption>Shopping Cart for User: {state.userId} Empty</TableCaption>
+        <TableCaption>Shopping Cart for User: {state.UserID} Empty</TableCaption>
       </Table>
     );
   }
 
   //itemIds and attributes init
-  var itemIds = Object.keys(state.item);
-  var itemAttributes = Object.keys(state.item[itemIds[0]]);
+  var itemIds = Object.keys(state.Item);
+  var itemAttributes = Object.keys(state.Item[itemIds[0]]);
 
   //dispatching + , - , and del functions upon button press
   const itemAdd = (id) => {
     dispatch({ type: ITEM_ACTIONS.INCREMENT, payload: id });
   };
   const itemSubtract = (id) => {
-    if (state.item[id].Quantity === 1) {
+    if (state.Item[id].Quantity === 1) {
       setToDelete(id);
       onOpen();
       return;
@@ -59,7 +58,7 @@ const CTable = ({ state, dispatch }) => {
   return (
     <>
       <Table variant="simple">
-        <TableCaption>Shopping Cart for User: {state.userId}</TableCaption>
+        <TableCaption>Shopping Cart for User: {state.UserID}</TableCaption>
         <Thead>
           <Tr>
             {/* mapping item attributes into the column headers */}
@@ -75,7 +74,7 @@ const CTable = ({ state, dispatch }) => {
           {itemIds.map((n) => (
             <Tr>
               {itemAttributes.map((x) => (
-                <Td>{state.item[n][x]}</Td>
+                <Td>{state.Item[n][x]}</Td>
               ))}
               <Td>
                 <Button marginRight={5} onClick={(e) => itemAdd(n)}>

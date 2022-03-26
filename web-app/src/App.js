@@ -1,46 +1,40 @@
 import CAddItemModal from "./components/CAddItemModal";
 import CTable from "./components/CTable";
-import {
-  Container,
-  Grid,
-  GridItem,
-  Box,
-  Input,
-  FormLabel,
-  Button,
-  useToast,
-} from "@chakra-ui/react";
+import { Grid, GridItem, Box, Input, FormLabel, Button, useToast } from "@chakra-ui/react";
 import React, { useReducer, useState } from "react";
-import { ITEM_ACTIONS, reducer } from "./reducers/ItemReducer";
-
+import { reducer } from "./reducers/ItemReducer";
+import GetDataAxios from "./axios/GetData";
 var clientCartObject = {
-  userId: 5,
-  item: {
+  UserID: "SAMPLE",
+  Item: {
     1: {
-      id: 1,
+      Id: 1,
       Name: "pencil",
       Quantity: 2,
     },
     3: {
-      id: 3,
+      Id: 3,
       Name: "paper",
       Quantity: 1,
     },
   },
-  vectorClock: [1, 2, 3, 4],
+  VectorClock: [1, 2, 3, 4],
 };
 
 function App() {
   const [state, dispatch] = useReducer(reducer, clientCartObject);
-
   const toast = useToast();
   const toastIdRef = React.useRef();
 
+  const [userId, setUserId] = useState();
+
   const CheckEnter = (e) => {
+    setUserId(e.target.value);
+
     console.log(e.target.value);
     if (e.key === "Enter") {
       console.log("hi");
-      findUser(e.target.value);
+      GetDataAxios(e.target.value, dispatch);
       return;
     }
     if (isNaN(e.key)) {
@@ -55,11 +49,6 @@ function App() {
     }
   };
 
-  const findUser = (userId) => {
-    console.log(userId);
-    dispatch({ type: ITEM_ACTIONS.CHANGE_USER, payload: userId });
-  };
-
   return (
     <div>
       <Grid templateColumns="repeat(6, 1fr)" gap={2}>
@@ -70,7 +59,13 @@ function App() {
               Change User
             </FormLabel>
             <Input placeholder="e.g, '5'" onKeyPress={(e) => CheckEnter(e)} type="number" />
-            <Button marginTop={3} width="100%">
+            <Button
+              marginTop={3}
+              width="100%"
+              onClick={() => {
+                GetDataAxios(userId, dispatch);
+              }}
+            >
               Find User
             </Button>
           </Box>

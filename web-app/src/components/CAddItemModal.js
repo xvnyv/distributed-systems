@@ -42,8 +42,8 @@ const CAddItemModal = ({ state, dispatch }) => {
       });
       return;
     }
-    if (typeof state.item[itemId] !== "undefined") {
-      console.log(state.item[itemId]);
+    if (typeof state.Item[itemId] !== "undefined") {
+      console.log(state.Item[itemId]);
       toastIdRef.current = toast({
         title: "Input Error",
         status: "error",
