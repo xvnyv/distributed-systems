@@ -4,19 +4,26 @@ export const reducer = (state, action) => {
       var id = action.payload;
       return {
         ...state,
-        [id]: { ...state[id], Quantity: state[id].Quantity + 1 },
+        [id]: { ...state[id], Quantity: state[id].Quantity ++ },
       };
     case ACTION_TYPES.DECREMENT_ITEM:
       var id = action.payload;
-      if (state[id].Quantity === 0) return state;
+      if (state[id].Quantity === 0){
+        delete state[id];
+        return state    
+    } 
       return {
         ...state,
-        [id]: { ...state[id], Quantity: state[id].Quantity - 1 },
+        [id]: { ...state[id], Quantity: state[id].Quantity -- },
       };
     case ACTION_TYPES.ADD_ITEM:
       return {
         ...state,
-        [action.payload.id]: { ...state[id], Quantity: state[id].Quantity - 1 },
+        [action.payload.itemId]: {
+          "id": action.payload.itemId,
+          "Name": action.payload.itemName,
+          "Quantity": 1,
+        },
       };
   }
 };
@@ -26,5 +33,3 @@ export const ACTION_TYPES = {
   DECREMENT_ITEM: "decItem",
   ADD_ITEM: "addItem",
 };
-
-

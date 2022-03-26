@@ -25,6 +25,14 @@ const CTable = ({state, dispatch}) => {
 
   console.log(state)
   console.log(dispatch)
+  if (Object.keys(state).length === 0) {
+    return (
+      <Table variant="simple">
+      <TableCaption>Shopping Cart Empty</TableCaption>
+      
+    </Table>
+    )
+  }
   var itemIds = Object.keys(state);
   var itemAttributes = Object.keys(state[itemIds[0]]);
   const itemAdd = (id) => {
