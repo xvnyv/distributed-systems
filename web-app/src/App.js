@@ -54,20 +54,23 @@ function App() {
       <Grid templateColumns="repeat(6, 1fr)" gap={2}>
         <GridItem colSpan={2} padding={3}>
           <Box borderRadius={10} border="1px" borderColor="blackAlpha.100" padding={5}>
-            <CAddItemModal state={state} dispatch={dispatch} />
-            <FormLabel marginTop={10} marginLeft={2}>
-              Change User
-            </FormLabel>
+            <FormLabel marginLeft={2}>Change User</FormLabel>
             <Input placeholder="e.g, '5'" onKeyPress={(e) => CheckEnter(e)} type="number" />
             <Button
               marginTop={3}
+              marginBottom={10}
               width="100%"
+              colorScheme={"pink"}
+              variant="ghost"
+              border="1px"
+              borderColor="pink.100"
               onClick={() => {
                 GetDataAxios(userId, dispatch);
               }}
             >
               Find User
             </Button>
+            <CAddItemModal state={state} dispatch={dispatch} />
           </Box>
         </GridItem>
         <GridItem colSpan={4} padding={3}>

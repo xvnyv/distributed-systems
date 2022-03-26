@@ -54,7 +54,7 @@ const CAddItemModal = ({ state, dispatch }) => {
       });
       return;
     }
-    dispatch({ type: ITEM_ACTIONS.NEW, payload: { itemId, itemName } });
+    dispatch({ type: ITEM_ACTIONS.NEW, payload: { itemId, itemName, toast, toastIdRef } });
     onClose();
   };
 
@@ -67,7 +67,14 @@ const CAddItemModal = ({ state, dispatch }) => {
 
   return (
     <>
-      <Button onClick={onOpen} width="100%">
+      <Button
+        onClick={onOpen}
+        width="100%"
+        colorScheme={"teal"}
+        variant="ghost"
+        border="1px"
+        borderColor="teal.100"
+      >
         New Item
       </Button>
 

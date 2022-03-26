@@ -1,16 +1,18 @@
+import axios from "axios";
 import GetDataAxios from "../axios/GetData";
 
 export const reducer = (state, action) => {
   switch (action.type) {
     case ITEM_ACTIONS.INCREMENT:
       var id = action.payload;
-      console.log({
+      var newState = {
         ...state,
         Item: {
           ...state.Item,
           [id]: { ...state.Item[id], Quantity: state.Item[id].Quantity + 1 },
         },
-      });
+      };
+
       return {
         ...state,
         Item: {
