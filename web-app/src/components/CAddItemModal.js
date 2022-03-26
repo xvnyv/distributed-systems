@@ -11,6 +11,7 @@ import {
   FormControl,
   FormLabel,
   Input,
+  useToast,
 } from "@chakra-ui/react";
 
 import React, { useState } from "react";
@@ -22,7 +23,33 @@ const CAddItemModal = ({ state, dispatch }) => {
   const [itemId, setItemId] = useState();
   const [itemName, setItemName] = useState();
 
+  const toast = useToast();
+  const toastIdRef = React.useRef();
+
   const addItem = () => {
+    if (itemId === "" || itemName === "") {
+      toastIdRef.current = toast({
+        title: "Input Error",
+        status: "error",
+        description: "Please fill in all fields",
+        duration: 2000,
+        isClosable: true,
+        position: "top-left",
+      });
+      return;
+    }
+    if (typeof state[itemId] !== "undefined") {
+      console.log(state[itemId]);
+      toastIdRef.current = toast({
+        title: "Input Error",
+        status: "error",
+        description: "Item ID already exists",
+        duration: 2000,
+        isClosable: true,
+        position: "top-left",
+      });
+      return;
+    }
     dispatch({ type: ITEM_ACTIONS.NEW, payload: { itemId, itemName } });
     onClose();
   };
@@ -51,6 +78,7 @@ const CAddItemModal = ({ state, dispatch }) => {
                 onChange={(e) => {
                   setItemId(e.target.value);
                 }}
+                onKeyPress={(e) => CheckEnter(e)}
                 placeholder="e.g, 6"
               />
             </FormControl>
