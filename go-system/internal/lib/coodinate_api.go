@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"sync"
+	"time"
 )
 
 /* Write would need: ItemID, ItemName, ItemQuantity and UserID.
@@ -52,6 +53,34 @@ func (n *Node) sendWriteRequests(c ClientCart, nodes [REPLICATION_FACTOR]NodeDat
 
 	// TODO: DETECT NODE FAILURE IN DETERMINE SUCCESS
 	return DetermineSuccess(WRITE, respChannel, coordMutex)
+}
+
+/* Send requests to unresponsive nodes concurrently and wait for minimum required nodes to succeed */
+func (n *Node) hintedWriteRequest(c ClientCart, node NodeData) {
+	// resps contains the failed nodes' responses
+	var respChannel = make(chan ChannelResp, 10)
+	timer := time.NewTimer(time.Minute * 5)
+	ticker := time.NewTicker(time.Second * 3)
+	for {
+		select {
+		case <-ticker.C:
+			go n.sendWriteRequest(c, node, respChannel)
+			resp := <-respChannel
+			if resp.APIResp.Status == SUCCESS {
+				// great
+				ticker.Stop()
+				timer.Stop()
+				log.Printf("Node %v has revived \n", n.Id)
+				return
+			}
+		case <-timer.C:
+			// end liao
+			log.Printf("Node %v permanently failed\n", n.Id)
+			ticker.Stop()
+			return
+		}
+	}
+
 }
 
 /* Message handler for write requests for external API to client application */
@@ -105,7 +134,11 @@ func (n *Node) handleWriteRequest(w http.ResponseWriter, r *http.Request) {
 	} else {
 		w.WriteHeader(500)
 		// TODO store a hint indicates that a write needs to be replayed to one or more unavailable nodes
-
+		// create a go routine for each failed nodes that will send a write request API to the each failed nodes every 2 to 3 second
+		// after 5 minutes, if the write request still fails, node is assumed to be down and go routine stops
+		for id := range resps {
+			go n.hintedWriteRequest(c, n.NodeMap[id])
+		}
 	}
 	w.Header().Set("Content-Type", "application/json")
 	coordMutex.Lock()
@@ -194,6 +227,7 @@ func (n *Node) HandleRequests() {
 	// Internal API
 	http.HandleFunc("/read", n.FulfilReadRequest)
 	http.HandleFunc("/write", n.FulfilWriteRequest)
+	http.HandleFunc("/simulate-fail", n.SimulateFailRequest)
 	// http.HandleFunc("/write-success", handleMessage2)
 	// http.HandleFunc("/read-success", handleMessage2)
 	// http.HandleFunc("/join-request", handleMessage2)

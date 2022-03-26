@@ -20,6 +20,7 @@ type Node struct {
 	MessageQueue []Message
 	Successors   []int
 	Predecessors []int
+	FailCount    int
 }
 
 type Message struct {

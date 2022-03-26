@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 func (n *Node) FulfilWriteRequest(w http.ResponseWriter, r *http.Request) {
@@ -17,6 +18,15 @@ func (n *Node) FulfilWriteRequest(w http.ResponseWriter, r *http.Request) {
 	err := n.BadgerWrite([]ClientCart{c})
 
 	resp := APIResp{}
+
+	if n.hasFailed() {
+		log.Printf("Request failed for node %v, fail count: %v\n", n.Id, n.FailCount)
+		w.WriteHeader(500)
+		resp.Status = SIMULATE_FAIL
+		resp.Error = "Node temporary failed."
+		return
+	}
+
 	if err != nil {
 		w.WriteHeader(500)
 		resp.Status = FAIL
@@ -49,6 +59,15 @@ func (n *Node) FulfilReadRequest(w http.ResponseWriter, r *http.Request) {
 	c, err := n.BadgerRead(userId)
 
 	resp := APIResp{}
+
+	if n.hasFailed() {
+		log.Printf("Request failed for node %v, fail count: %v\n", n.Id, n.FailCount)
+		w.WriteHeader(500)
+		resp.Status = SIMULATE_FAIL
+		resp.Error = "Node temporary failed."
+		return
+	}
+
 	if err != nil {
 		w.WriteHeader(500)
 		resp.Status = FAIL
@@ -71,4 +90,13 @@ func (n *Node) FulfilReadRequest(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Write(jsonResp)
 	log.Println("Read request completed for", c)
+}
+
+func (n *Node) SimulateFailRequest(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+
+	count, err := strconv.Atoi(query.Get("count")) //! type string
+	log.Println("Error with simluate fail request", err)
+
+	n.FailCount = count
 }
