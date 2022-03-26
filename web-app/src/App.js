@@ -4,6 +4,7 @@ import { Grid, GridItem, Box, Input, FormLabel, Button, useToast } from "@chakra
 import React, { useReducer, useState } from "react";
 import { reducer } from "./reducers/ItemReducer";
 import GetDataAxios from "./axios/GetData";
+import CAddUserModal from "./components/CAddUserModal";
 var clientCartObject = {
   UserID: "SAMPLE",
   Item: {
@@ -29,7 +30,7 @@ function App() {
   const [userId, setUserId] = useState();
 
   const CheckEnter = (e) => {
-    setUserId(e.target.value);
+    // setUserId(e.target.value);
 
     console.log(e.target.value);
     if (e.key === "Enter") {
@@ -55,7 +56,12 @@ function App() {
         <GridItem colSpan={2} padding={3}>
           <Box borderRadius={10} border="1px" borderColor="blackAlpha.100" padding={5}>
             <FormLabel marginLeft={2}>Change User</FormLabel>
-            <Input placeholder="e.g, '5'" onKeyPress={(e) => CheckEnter(e)} type="number" />
+            <Input
+              placeholder="e.g, '5'"
+              onChange={(e) => setUserId(e.target.value)}
+              onKeyPress={(e) => CheckEnter(e)}
+              type="number"
+            />
             <Button
               marginTop={3}
               marginBottom={10}
@@ -71,6 +77,7 @@ function App() {
               Find User
             </Button>
             <CAddItemModal state={state} dispatch={dispatch} />
+            {/* <CAddUserModal state={state} dispatch={dispatch} /> */}
           </Box>
         </GridItem>
         <GridItem colSpan={4} padding={3}>

@@ -56,6 +56,7 @@ func (n *Node) sendWriteRequests(c ClientCart, nodes [REPLICATION_FACTOR]NodeDat
 
 /* Message handler for write requests for external API to client application */
 func (n *Node) handleWriteRequest(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Coordinator Node:%v WRITE REQUEST FROM CLIENT RECEIVED \n", n.Id)
 	var c ClientCart
 	body, _ := ioutil.ReadAll(r.Body)
 	err := json.Unmarshal(body, &c)
@@ -149,6 +150,7 @@ func (n *Node) sendReadRequests(key string, nodes [REPLICATION_FACTOR]NodeData, 
 
 /* Message handler for read requests for external API to client application */
 func (n *Node) handleReadRequest(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Coordinator Node:%v READ REQUEST FROM CLIENT RECEIVED \n", n.Id)
 	query := r.URL.Query()
 	userId := query.Get("id")
 

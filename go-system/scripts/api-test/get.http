@@ -2,7 +2,7 @@
 # Calculate hash
 # Send read request to responsible nodes
 ### Handle write request
-GET http://localhost:8004/read-request?id=126
+GET http://localhost:8080/read-request?id=126
 
 
 # Read item in Badger DB

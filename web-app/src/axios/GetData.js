@@ -1,10 +1,46 @@
 import axios from "axios";
 import { ITEM_ACTIONS } from "../reducers/ItemReducer";
 
-const GetDataAxios = async (userId, dispatch) => {
-  axios.get(`http://localhost:8080/read?id=${userId}`).then((value) => {
-    dispatch({ type: ITEM_ACTIONS.CHANGE_USER, payload: value.data.Data });
-  });
+const GetUserData = async (userId, dispatch) => {
+  const res = await fetch(`http://localhost:8080/read-request?id=${userId}`, {
+    method: "GET",
+    headers: {
+      "Content-type": "application/json",
+    },
+  })
+    .then((response) => {
+      response.json().then((data) => {
+        console.log("Success:", data.Data);
+        dispatch({ type: ITEM_ACTIONS.CHANGE_USER, payload: data.Data });
+      });
+    })
+    .catch((err) => {
+      console.log(err);
+      dispatch({
+        type: ITEM_ACTIONS.CHANGE_USER,
+        payload: { UserID: userId, Item: {}, VectorClock: [0, 0, 0, 0, 0] },
+      });
+    });
+  // const data = await res.json();
 };
 
-export default GetDataAxios;
+export default GetUserData;
+
+export const SendPostRequest = async (item) => {
+  console.log(item);
+  console.log("sending");
+  const res = await fetch(`http://localhost:8080/write-request`, {
+    method: "POST",
+    headers: {
+      "Content-type": "application/json",
+    },
+    body: JSON.stringify(item),
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      console.log("Success:", data);
+    })
+    .catch((error) => {
+      console.error("Error:", error);
+    });
+};

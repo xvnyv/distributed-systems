@@ -26,7 +26,7 @@ const CTable = ({ state, dispatch }) => {
   const cancelRef = React.useRef();
   const [toDelete, setToDelete] = useState();
   //return empty cart if no items
-  if (Object.keys(state).length === 0) {
+  if (Object.keys(state?.Item).length === 0) {
     return (
       <Table variant="simple">
         <TableCaption>Shopping Cart for User: {state.UserID} Empty</TableCaption>
