@@ -44,11 +44,10 @@ export const reducer = (state, action) => {
       break;
     case ITEM_ACTIONS.CHANGE_USER:
       var newState = action.payload;
-      break;
+      return newState;
   }
-  if (action.type !== ITEM_ACTIONS.CHANGE_USER) {
-    SendPostRequest(newState);
-  }
+  SendPostRequest(newState);
+
   return newState;
 };
 
