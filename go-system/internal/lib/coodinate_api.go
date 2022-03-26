@@ -51,7 +51,6 @@ func (n *Node) sendWriteRequests(c ClientCart, nodes [REPLICATION_FACTOR]NodeDat
 		go n.sendWriteRequest(c, node, respChannel)
 	}
 
-	// TODO: DETECT NODE FAILURE IN DETERMINE SUCCESS
 	return DetermineSuccess(WRITE, respChannel, coordMutex)
 }
 
@@ -84,6 +83,11 @@ func (n *Node) hintedWriteRequest(c ClientCart, node NodeData) {
 
 /* Message handler for write requests for external API to client application */
 func (n *Node) handleWriteRequest(w http.ResponseWriter, r *http.Request) {
+
+	// ? FEATURE: if node fails, it can still coordinate so that hinted handoff will be executed.
+	// ? If we allow coordinator to fail, the write request gets dropped without any backup
+	// ? TBC whether coordinator should fail...
+
 	var c ClientCart
 	body, _ := ioutil.ReadAll(r.Body)
 	err := json.Unmarshal(body, &c)
@@ -117,13 +121,6 @@ func (n *Node) handleWriteRequest(w http.ResponseWriter, r *http.Request) {
 	} else {
 		c.VectorClock[n.Id]++
 	}
-	// before we send this write request, we have to send the messages in hinted Queue first
-
-	// just have a universal Message queue
-	// At the start, we pop head of queue and sendWriteRequest
-	// if !success, then append to end of queue
-	// iterate through the steps
-	// have a counter to check length of queue and no. of iterations to prevent infinite loop
 
 	var coordMutex sync.Mutex
 	success, resps := n.sendWriteRequests(c, responsibleNodes, &coordMutex)
@@ -132,9 +129,6 @@ func (n *Node) handleWriteRequest(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(201)
 	} else {
 		w.WriteHeader(500)
-		// TODO store a hint indicates that a write needs to be replayed to one or more unavailable nodes
-		// create a go routine for each failed nodes that will send a write request API to the each failed nodes every 2 to 3 second
-		// after 5 minutes, if the write request still fails, node is assumed to be down and go routine stops
 		for id := range resps {
 			for _, nodeData := range n.NodeMap {
 				if nodeData.Id == id {
