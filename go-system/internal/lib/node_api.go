@@ -96,7 +96,9 @@ func (n *Node) SimulateFailRequest(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 
 	count, err := strconv.Atoi(query.Get("count")) //! type string
-	log.Println("Error with simluate fail request", err)
+	if err != nil {
+		log.Println("Error with simluate fail request", err)
+	}
 
 	n.FailCount = count
 }

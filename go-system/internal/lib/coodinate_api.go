@@ -80,7 +80,6 @@ func (n *Node) hintedWriteRequest(c ClientCart, node NodeData) {
 			return
 		}
 	}
-
 }
 
 /* Message handler for write requests for external API to client application */
@@ -137,7 +136,11 @@ func (n *Node) handleWriteRequest(w http.ResponseWriter, r *http.Request) {
 		// create a go routine for each failed nodes that will send a write request API to the each failed nodes every 2 to 3 second
 		// after 5 minutes, if the write request still fails, node is assumed to be down and go routine stops
 		for id := range resps {
-			go n.hintedWriteRequest(c, n.NodeMap[id])
+			for _, nodeData := range n.NodeMap {
+				if nodeData.Id == id {
+					go n.hintedWriteRequest(c, nodeData)
+				}
+			}
 		}
 	}
 	w.Header().Set("Content-Type", "application/json")
