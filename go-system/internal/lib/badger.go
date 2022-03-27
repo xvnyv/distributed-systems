@@ -8,9 +8,36 @@ import (
 	badger "github.com/dgraph-io/badger/v3"
 )
 
-func (n *Node) BadgerWrite(o []ClientCart) error {
+func (n *Node) BadgerWrite(c ClientCart) error {
 	opts := badger.DefaultOptions(fmt.Sprintf("tmp/%v/badger", n.Id))
 	opts.Logger = nil
+
+	toWrite := ClientCart{}
+	lastWritten, err := n.BadgerRead(c.UserID)
+	if err != nil {
+		if err.Error() == "Key not found" {
+			toWrite = c
+			fmt.Printf("Key not found, writing %v\n", c)
+			//do nothing
+		} else {
+			return err
+		}
+	} else {
+		//check whether current vector clock smaller than received
+		fmt.Printf("found previous verison: %v\n", lastWritten.VectorClock)
+		fmt.Printf("comparing with new version: %v\n", c.VectorClock)
+
+		if VectorClockSmaller(lastWritten.VectorClock, c.VectorClock) {
+			fmt.Println("current value in db vector clock smaller than new write val: Overwrite")
+			toWrite = c
+		} else if VectorClockSmaller(c.VectorClock, lastWritten.VectorClock) {
+			// no need to write
+			return nil
+		} else {
+			fmt.Println("current value in db vector clock vs new write val ambiguos: Merge")
+			toWrite = MergeClientCarts(lastWritten, c)
+		}
+	}
 
 	db, err := badger.Open(opts)
 	if err != nil {
@@ -19,71 +46,23 @@ func (n *Node) BadgerWrite(o []ClientCart) error {
 	}
 	defer db.Close()
 
-	for _, v := range o {
-		toWrite := ClientCart{}
-		// INIT for reading ----
-		res := ClientCart{}
-		err = db.View(func(txn *badger.Txn) error {
-			item, err := txn.Get([]byte(v.UserID))
-			if err != nil {
-				return err
-			}
-			var valCopy []byte
-
-			err = item.Value(func(val []byte) error {
-				valCopy = append([]byte{}, val...)
-
-				return nil
-			})
-			if err != nil {
-				return err
-			}
-
-			//convert valCopy to DataObject
-			err = json.Unmarshal(valCopy, &res)
-			return err
-			//reading complete here ----
-		})
-
-		if err != nil {
-			if err.Error() == "Key not found" {
-				toWrite = v
-				fmt.Printf("Key not found, writing %v\n", v)
-				//do nothing
-			} else {
-				return err
-			}
-		} else {
-			//check whether current vector clock smaller than received
-			fmt.Printf("found previous verison: %v\n", res.VectorClock)
-			fmt.Printf("comparing with new version: %v\n", v.VectorClock)
-
-			if VectorClockSmaller(res.VectorClock, v.VectorClock) {
-				fmt.Println("current value in db vector clock smaller than new write val: Overwrite")
-				toWrite = v
-			} else {
-				fmt.Println("current value in db vector clock vs new write val ambiguos: Merge")
-				toWrite = MergeClientCarts(res, v)
-			}
+	err = db.Update(func(txn *badger.Txn) error {
+		//need convert DataObject to byte array
+		//forloop
+		if c.UserID == "" {
+			log.Println("No UserId. Object is:", toWrite)
 		}
-
-		err = db.Update(func(txn *badger.Txn) error {
-			//need convert DataObject to byte array
-			//forloop
-			if v.UserID == "" {
-				log.Println("No UserId. Object is:", toWrite)
-			}
-			dataObjectBytes, _ := json.Marshal(toWrite)
-			err := txn.Set([]byte(toWrite.UserID), dataObjectBytes)
-			if err != nil {
-				return err
-			}
-			return nil
-		})
+		dataObjectBytes, _ := json.Marshal(toWrite)
+		err := txn.Set([]byte(toWrite.UserID), dataObjectBytes)
 		if err != nil {
 			return err
 		}
+		return nil
+	})
+	if err != nil {
+		return err
 	}
+
 	return nil
 }
 
