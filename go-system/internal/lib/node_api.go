@@ -14,7 +14,9 @@ func (n *Node) FulfilWriteRequest(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("Write request received: ", c)
 
+	n.BadgerLock.Lock()
 	err := n.BadgerWrite([]ClientCart{c})
+	n.BadgerLock.Unlock()
 
 	resp := APIResp{}
 	if err != nil {

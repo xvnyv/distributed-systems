@@ -18,16 +18,63 @@ func (n *Node) BadgerWrite(o []ClientCart) error {
 		return err
 	}
 	defer db.Close()
-	// Your code here…
+
 	for _, v := range o {
+		toWrite := ClientCart{}
+		// INIT for reading ----
+		res := ClientCart{}
+		err = db.View(func(txn *badger.Txn) error {
+			item, err := txn.Get([]byte(v.UserID))
+			if err != nil {
+				return err
+			}
+			var valCopy []byte
+
+			err = item.Value(func(val []byte) error {
+				valCopy = append([]byte{}, val...)
+
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+
+			//convert valCopy to DataObject
+			err = json.Unmarshal(valCopy, &res)
+			return err
+			//reading complete here ----
+		})
+
+		if err != nil {
+			if err.Error() == "Key not found" {
+				toWrite = v
+				fmt.Printf("Key not found, writing %v\n", v)
+				//do nothing
+			} else {
+				return err
+			}
+		} else {
+			//check whether current vector clock smaller than received
+			fmt.Printf("found previous verison: %v\n", res.VectorClock)
+			fmt.Printf("comparing with new version: %v\n", v.VectorClock)
+
+			if VectorClockSmaller(res.VectorClock, v.VectorClock) {
+				fmt.Println("current value in db vector clock smaller than new write val: Overwrite")
+				toWrite = v
+			} else {
+				fmt.Println("current value in db vector clock vs new write val ambiguos: Merge")
+				toWrite = MergeClientCarts(res, v)
+			}
+		}
+
 		err = db.Update(func(txn *badger.Txn) error {
 			//need convert DataObject to byte array
 			//forloop
 			if v.UserID == "" {
-				log.Println("No UserId. Object is:", v)
+				log.Println("No UserId. Object is:", toWrite)
 			}
-			dataObjectBytes, _ := json.Marshal(v)
-			err := txn.Set([]byte(v.UserID), dataObjectBytes)
+			dataObjectBytes, _ := json.Marshal(toWrite)
+			err := txn.Set([]byte(toWrite.UserID), dataObjectBytes)
 			if err != nil {
 				return err
 			}
@@ -61,17 +108,9 @@ func (n *Node) BadgerRead(key string) (ClientCart, error) {
 		if err != nil {
 			return err
 		}
-
-		// Alternatively, you could also use item.ValueCopy().
-		// valCopy, err := item.ValueCopy(nil)
-		// handle(err)
-		//
 		var valCopy []byte
 
 		err = item.Value(func(val []byte) error {
-			// This func with val would only be called if item.Value encounters no error.
-
-			// Copying or parsing val is valid.
 			valCopy = append([]byte{}, val...)
 
 			return nil

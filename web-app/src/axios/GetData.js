@@ -1,4 +1,5 @@
 import axios from "axios";
+import { v4 as uuidv4 } from "uuid";
 import { ITEM_ACTIONS } from "../reducers/ItemReducer";
 
 const GetUserData = async (userId, dispatch) => {
@@ -27,9 +28,10 @@ const GetUserData = async (userId, dispatch) => {
 export default GetUserData;
 
 export const SendPostRequest = async (item) => {
+  item["Guid"] = uuidv4();
   console.log(item);
   console.log("sending");
-  const res = await fetch(`http://localhost:8080/write-request`, {
+  await fetch(`http://localhost:8080/write-request`, {
     method: "POST",
     headers: {
       "Content-type": "application/json",
@@ -43,5 +45,4 @@ export const SendPostRequest = async (item) => {
     .catch((error) => {
       console.error("Error:", error);
     });
-  console.log("received");
 };

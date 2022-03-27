@@ -1,5 +1,7 @@
 package lib
 
+import "sync"
+
 type MessageType int
 
 type NodeData struct {
@@ -19,6 +21,7 @@ type Node struct {
 	NodeMap      NodeMap
 	Successors   []int
 	Predecessors []int
+	BadgerLock   *sync.Mutex
 }
 
 type Message struct {

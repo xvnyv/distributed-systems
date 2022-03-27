@@ -16,11 +16,12 @@ export const reducer = (state, action) => {
       break;
     case ITEM_ACTIONS.DECREMENT:
       var id = action.payload;
+      var newQty = state.Item[id].Quantity - 1;
       var newState = {
         ...state,
         Item: {
           ...state.Item,
-          [id]: { ...state.Item[id], Quantity: state.Item[id].Quantity - 1 },
+          [id]: { ...state.Item[id], Quantity: newQty },
         },
       };
       break;

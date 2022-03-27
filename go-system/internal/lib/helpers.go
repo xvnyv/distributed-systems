@@ -181,3 +181,104 @@ func (o *ClientCart) IsEqual(b ClientCart) bool {
 	}
 	return true
 }
+
+// type ClientCart struct {
+// 	UserID      string
+// 	Item        map[int]ItemObject
+// 	VectorClock []int
+// }
+
+//returns node contains clientCartSelf, receives clientCartReceived
+func MergeClientCarts(clientCartSelf, clientCartReceived ClientCart) ClientCart {
+	var output ClientCart
+	output.UserID = clientCartReceived.UserID
+	newmap := make(map[int]ItemObject)
+	for key, value := range clientCartSelf.Item {
+		var currentKey = key
+		var currentObject = value
+		if val, ok := clientCartReceived.Item[currentKey]; ok {
+			if currentObject.Quantity < val.Quantity {
+				currentObject = val
+			}
+		}
+		newmap[currentKey] = currentObject
+	}
+
+	for key, value := range clientCartReceived.Item {
+		if _, ok := newmap[key]; ok {
+		} else {
+			newmap[key] = value
+		}
+	}
+
+	output.Item = newmap
+
+	newVectorClock := make([]int, len(clientCartSelf.VectorClock))
+	for key, value := range clientCartSelf.VectorClock {
+		newVectorClock[key] = Max(value, clientCartReceived.VectorClock[key])
+	}
+
+	output.VectorClock = newVectorClock
+
+	return output
+}
+
+func ClientCartEqual(c1, c2 ClientCart) bool {
+	if c1.UserID != c2.UserID {
+		return false
+	}
+	if !ItemMapEqual(c1.Item, c2.Item) {
+		return false
+	}
+	if !OrderedIntArrayEqual(c1.VectorClock, c2.VectorClock) {
+		return false
+	}
+	return true
+}
+
+func ItemMapEqual(a, b map[int]ItemObject) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for key, vala := range a {
+		if valb, ok := b[key]; ok {
+			if !ItemObjectEqual(vala, valb) {
+				return false
+			}
+		} else {
+			return false
+		}
+	}
+
+	return true
+}
+
+func ItemObjectEqual(a, b ItemObject) bool {
+	if a.Id != b.Id {
+		return false
+	}
+	if a.Name != b.Name {
+		return false
+	}
+	if a.Quantity != b.Quantity {
+		return false
+	}
+	return true
+}
+
+// checks if arr1 is smaller than arr2
+func VectorClockSmaller(arr1, arr2 []int) bool {
+	for i := 0; i < len(arr2); i++ {
+		if arr1[i] > arr2[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func Max(x, y int) int {
+	if x < y {
+		return y
+	}
+	return x
+}
