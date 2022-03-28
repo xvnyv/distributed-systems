@@ -1,10 +1,9 @@
-import axios from "axios";
-import GetDataAxios, { SendPostRequest } from "../axios/GetData";
+import { SendPostRequest } from "../http_helpers/PostGetRequesters";
 
-export const reducer = (state, action) => {
+export const clientCartReducer = (state, action) => {
   switch (action.type) {
     case ITEM_ACTIONS.INCREMENT:
-      var id = action.payload;
+      var id = action.payload.id;
       var newState = {
         ...state,
         Item: {
@@ -15,7 +14,7 @@ export const reducer = (state, action) => {
 
       break;
     case ITEM_ACTIONS.DECREMENT:
-      var id = action.payload;
+      var id = action.payload.id;
       var newQty = state.Item[id].Quantity - 1;
       var newState = {
         ...state,
@@ -39,15 +38,20 @@ export const reducer = (state, action) => {
       };
       break;
     case ITEM_ACTIONS.DELETE:
-      var id = action.payload;
+      var id = action.payload.toDelete;
       delete state.Item[id];
       var newState = state;
       break;
     case ITEM_ACTIONS.CHANGE_USER:
-      var newState = action.payload;
-      return newState;
+      return action.payload;
   }
-  SendPostRequest(newState);
+
+  const result = SendPostRequest(
+    newState,
+    action.payload.toast,
+    action.payload.toastRef,
+    action.payload.dispatch
+  );
 
   return newState;
 };

@@ -1,10 +1,21 @@
-import CAddItemModal from "./components/CAddItemModal";
-import CTable from "./components/CTable";
-import { Grid, GridItem, Box, Input, FormLabel, Button, useToast } from "@chakra-ui/react";
+//dependencies
 import React, { useReducer, useState } from "react";
-import { reducer } from "./reducers/ItemReducer";
-import GetDataAxios from "./axios/GetData";
-import CAddUserModal from "./components/CAddUserModal";
+import {
+  Grid,
+  GridItem,
+  Box,
+  Input,
+  FormLabel,
+  Button,
+  useToast,
+} from "@chakra-ui/react";
+// helper functions
+import { clientCartReducer } from "./reducers/ClientCartReducer";
+import { SendGetRequest } from "./http_helpers/PostGetRequesters";
+// import components
+import CTable from "./components/CTable";
+import CAddItemModal from "./components/CAddItemModal";
+
 var clientCartObject = {
   UserID: "SAMPLE",
   Item: {
@@ -23,7 +34,10 @@ var clientCartObject = {
 };
 
 function App() {
-  const [state, dispatch] = useReducer(reducer, clientCartObject);
+  const [clientCartState, clientCartDispatch] = useReducer(
+    clientCartReducer,
+    clientCartObject
+  );
   const toast = useToast();
   const toastIdRef = React.useRef();
 
@@ -31,11 +45,8 @@ function App() {
 
   const CheckEnter = (e) => {
     // setUserId(e.target.value);
-
-    console.log(e.target.value);
     if (e.key === "Enter") {
-      console.log("hi");
-      GetDataAxios(e.target.value, dispatch);
+      SendGetRequest(e.target.value, clientCartDispatch);
       return;
     }
     if (isNaN(e.key)) {
@@ -54,7 +65,12 @@ function App() {
     <div>
       <Grid templateColumns="repeat(6, 1fr)" gap={2}>
         <GridItem colSpan={2} padding={3}>
-          <Box borderRadius={10} border="1px" borderColor="blackAlpha.100" padding={5}>
+          <Box
+            borderRadius={10}
+            border="1px"
+            borderColor="blackAlpha.100"
+            padding={5}
+          >
             <FormLabel marginLeft={2}>Change User</FormLabel>
             <Input
               placeholder="e.g, '5'"
@@ -71,19 +87,32 @@ function App() {
               border="1px"
               borderColor="pink.100"
               onClick={() => {
-                GetDataAxios(userId, dispatch);
+                SendGetRequest(userId, clientCartDispatch);
               }}
             >
               Find User
             </Button>
-            <CAddItemModal state={state} dispatch={dispatch} />
+            <CAddItemModal
+              state={clientCartState}
+              dispatch={clientCartDispatch}
+            />
             {/* <CAddUserModal state={state} dispatch={dispatch} /> */}
           </Box>
         </GridItem>
         <GridItem colSpan={4} padding={3}>
-          <Box borderRadius={10} border="1px" borderColor="blackAlpha.100" padding={5}>
+          <Box
+            borderRadius={10}
+            border="1px"
+            borderColor="blackAlpha.100"
+            padding={5}
+          >
             {/* Table for to show shopping cart items */}
-            <CTable state={state} dispatch={dispatch} />
+            <CTable
+              state={clientCartState}
+              dispatch={clientCartDispatch}
+              toast={toast}
+              toastRef={toastIdRef}
+            />
           </Box>
         </GridItem>
       </Grid>

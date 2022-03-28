@@ -114,50 +114,50 @@ func TestItemMapEqual(t *testing.T) {
 	testItems := make([]testItem, 6)
 	testItems[0] = testItem{
 		item1: map[int]ItemObject{
-			0: ItemObject{Id: 0, Name: "Popcorn sweet", Quantity: 1124},
-			1: ItemObject{Id: 1, Name: "Popcorn", Quantity: 10}},
+			0: {Id: 0, Name: "Popcorn sweet", Quantity: 1124},
+			1: {Id: 1, Name: "Popcorn", Quantity: 10}},
 		item2: map[int]ItemObject{
-			1: ItemObject{Id: 1, Name: "Popcorn", Quantity: 10},
-			0: ItemObject{Id: 0, Name: "Popcorn sweet", Quantity: 1124}},
+			1: {Id: 1, Name: "Popcorn", Quantity: 10},
+			0: {Id: 0, Name: "Popcorn sweet", Quantity: 1124}},
 		expected: true}
 	testItems[1] = testItem{ //change quantity
 		item1: map[int]ItemObject{
-			0: ItemObject{Id: 0, Name: "Popcorn sweet", Quantity: 1124},
-			1: ItemObject{Id: 1, Name: "Popcorn", Quantity: 10}},
+			0: {Id: 0, Name: "Popcorn sweet", Quantity: 1124},
+			1: {Id: 1, Name: "Popcorn", Quantity: 10}},
 		item2: map[int]ItemObject{
-			1: ItemObject{Id: 1, Name: "Popcorn", Quantity: 10},
-			0: ItemObject{Id: 0, Name: "Popcorn sweet", Quantity: 114}},
+			1: {Id: 1, Name: "Popcorn", Quantity: 10},
+			0: {Id: 0, Name: "Popcorn sweet", Quantity: 114}},
 		expected: false}
 	testItems[2] = testItem{ //change number of items
 		item1: map[int]ItemObject{
-			0: ItemObject{Id: 0, Name: "Popcorn sweet", Quantity: 1124},
-			1: ItemObject{Id: 1, Name: "Popcorn", Quantity: 10}},
+			0: {Id: 0, Name: "Popcorn sweet", Quantity: 1124},
+			1: {Id: 1, Name: "Popcorn", Quantity: 10}},
 		item2: map[int]ItemObject{
-			0: ItemObject{Id: 0, Name: "Popcorn sweet", Quantity: 1124}},
+			0: {Id: 0, Name: "Popcorn sweet", Quantity: 1124}},
 		expected: false}
 	testItems[3] = testItem{ //change name
 		item1: map[int]ItemObject{
-			0: ItemObject{Id: 0, Name: "Popcorn sweeter", Quantity: 1124},
-			1: ItemObject{Id: 1, Name: "Popcorn", Quantity: 10}},
+			0: {Id: 0, Name: "Popcorn sweeter", Quantity: 1124},
+			1: {Id: 1, Name: "Popcorn", Quantity: 10}},
 		item2: map[int]ItemObject{
-			1: ItemObject{Id: 1, Name: "Popcorn", Quantity: 10},
-			0: ItemObject{Id: 0, Name: "Popcorn sweet", Quantity: 1124}},
+			1: {Id: 1, Name: "Popcorn", Quantity: 10},
+			0: {Id: 0, Name: "Popcorn sweet", Quantity: 1124}},
 		expected: false}
 	testItems[4] = testItem{ //change id inside
 		item1: map[int]ItemObject{
-			0: ItemObject{Id: 4, Name: "Popcorn sweet", Quantity: 1124},
-			1: ItemObject{Id: 1, Name: "Popcorn", Quantity: 10}},
+			0: {Id: 4, Name: "Popcorn sweet", Quantity: 1124},
+			1: {Id: 1, Name: "Popcorn", Quantity: 10}},
 		item2: map[int]ItemObject{
-			1: ItemObject{Id: 1, Name: "Popcorn", Quantity: 10},
-			0: ItemObject{Id: 0, Name: "Popcorn sweet", Quantity: 1124}},
+			1: {Id: 1, Name: "Popcorn", Quantity: 10},
+			0: {Id: 0, Name: "Popcorn sweet", Quantity: 1124}},
 		expected: false}
 	testItems[5] = testItem{ //change id outside
 		item1: map[int]ItemObject{
-			4: ItemObject{Id: 0, Name: "Popcorn sweet", Quantity: 1124},
-			1: ItemObject{Id: 1, Name: "Popcorn", Quantity: 10}},
+			4: {Id: 0, Name: "Popcorn sweet", Quantity: 1124},
+			1: {Id: 1, Name: "Popcorn", Quantity: 10}},
 		item2: map[int]ItemObject{
-			1: ItemObject{Id: 1, Name: "Popcorn", Quantity: 10},
-			0: ItemObject{Id: 0, Name: "Popcorn sweet", Quantity: 1124}},
+			1: {Id: 1, Name: "Popcorn", Quantity: 10},
+			0: {Id: 0, Name: "Popcorn sweet", Quantity: 1124}},
 		expected: false}
 	for i := 0; i < len(testItems); i++ {
 		isItemMapEqual := ItemMapEqual(testItems[i].item1, testItems[i].item2)

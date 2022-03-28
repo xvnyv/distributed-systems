@@ -17,10 +17,10 @@ import {
 } from "@chakra-ui/react";
 import { AddIcon, MinusIcon } from "@chakra-ui/icons";
 //test
-import { ITEM_ACTIONS } from "../reducers/ItemReducer";
+import { ITEM_ACTIONS } from "../reducers/ClientCartReducer";
 import React, { useState } from "react";
 
-const CTable = ({ state, dispatch }) => {
+const CTable = ({ state, dispatch, toast, toastRef }) => {
   //delete alert
   const { isOpen, onOpen, onClose } = useDisclosure();
   const cancelRef = React.useRef();
@@ -29,7 +29,9 @@ const CTable = ({ state, dispatch }) => {
   if (Object.keys(state?.Item).length === 0) {
     return (
       <Table variant="simple">
-        <TableCaption>Shopping Cart for User: {state.UserID} Empty</TableCaption>
+        <TableCaption>
+          Shopping Cart for User: {state.UserID} Empty
+        </TableCaption>
       </Table>
     );
   }
@@ -40,7 +42,10 @@ const CTable = ({ state, dispatch }) => {
 
   //dispatching + , - , and del functions upon button press
   const itemAdd = (id) => {
-    dispatch({ type: ITEM_ACTIONS.INCREMENT, payload: id });
+    dispatch({
+      type: ITEM_ACTIONS.INCREMENT,
+      payload: { id, toast, toastRef, dispatch },
+    });
   };
   const itemSubtract = (id) => {
     if (state.Item[id].Quantity === 1) {
@@ -48,10 +53,16 @@ const CTable = ({ state, dispatch }) => {
       onOpen();
       return;
     }
-    dispatch({ type: ITEM_ACTIONS.DECREMENT, payload: id });
+    dispatch({
+      type: ITEM_ACTIONS.DECREMENT,
+      payload: { id, toast, toastRef, dispatch },
+    });
   };
   const itemDelete = () => {
-    dispatch({ type: ITEM_ACTIONS.DELETE, payload: toDelete });
+    dispatch({
+      type: ITEM_ACTIONS.DELETE,
+      payload: { toDelete, toast, toastRef, dispatch },
+    });
     onClose();
   };
 
@@ -90,14 +101,20 @@ const CTable = ({ state, dispatch }) => {
       </Table>
 
       {/* alert dialog for deleting item */}
-      <AlertDialog isOpen={isOpen} leastDestructiveRef={cancelRef} onClose={onClose}>
+      <AlertDialog
+        isOpen={isOpen}
+        leastDestructiveRef={cancelRef}
+        onClose={onClose}
+      >
         <AlertDialogOverlay>
           <AlertDialogContent>
             <AlertDialogHeader fontSize="lg" fontWeight="bold">
               Delete Item
             </AlertDialogHeader>
 
-            <AlertDialogBody>Are you sure? You can't undo this action afterwards.</AlertDialogBody>
+            <AlertDialogBody>
+              Are you sure? You can't undo this action afterwards.
+            </AlertDialogBody>
 
             <AlertDialogFooter>
               <Button ref={cancelRef} onClick={onClose}>

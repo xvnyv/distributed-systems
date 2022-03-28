@@ -8,7 +8,7 @@ import (
 	badger "github.com/dgraph-io/badger/v3"
 )
 
-func (n *Node) BadgerWrite(c ClientCart) error {
+func (n *Node) BadgerWrite(c ClientCart) (ClientCart, error) {
 	opts := badger.DefaultOptions(fmt.Sprintf("tmp/%v/badger", n.Id))
 	opts.Logger = nil
 
@@ -20,7 +20,7 @@ func (n *Node) BadgerWrite(c ClientCart) error {
 			fmt.Printf("Key not found, writing %v\n", c)
 			//do nothing
 		} else {
-			return err
+			return c, err
 		}
 	} else {
 		//check whether current vector clock smaller than received
@@ -32,7 +32,7 @@ func (n *Node) BadgerWrite(c ClientCart) error {
 			toWrite = c
 		} else if VectorClockSmaller(c.VectorClock, lastWritten.VectorClock) {
 			// no need to write
-			return nil
+			return lastWritten, nil
 		} else {
 			fmt.Println("current value in db vector clock vs new write val ambiguos: Merge")
 			toWrite = MergeClientCarts(lastWritten, c)
@@ -42,13 +42,12 @@ func (n *Node) BadgerWrite(c ClientCart) error {
 	db, err := badger.Open(opts)
 	if err != nil {
 		log.Printf("Badger Error: %v\n", err)
-		return err
+		return c, err
 	}
 	defer db.Close()
 
 	err = db.Update(func(txn *badger.Txn) error {
 		//need convert DataObject to byte array
-		//forloop
 		if c.UserID == "" {
 			log.Println("No UserId. Object is:", toWrite)
 		}
@@ -60,10 +59,10 @@ func (n *Node) BadgerWrite(c ClientCart) error {
 		return nil
 	})
 	if err != nil {
-		return err
+		return c, err
 	}
 
-	return nil
+	return toWrite, nil
 }
 
 /**

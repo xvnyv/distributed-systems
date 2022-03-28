@@ -42,7 +42,7 @@ var keylst []string = make([]string, 0)
 
 func TestBadgerReadWriteDelete(t *testing.T) {
 
-	err := testNode.BadgerWrite(testData)
+	_, err := testNode.BadgerWrite(testData)
 	if err != nil {
 		t.Fatal("Write Failed")
 	}
@@ -79,7 +79,7 @@ func TestBadgerGetKeys(t *testing.T) {
 			VectorClock: []int{i, i, i, i, i, i, i, i},
 		}
 		keylst = append(keylst, tempObject.UserID)
-		err := testNode.BadgerWrite(tempObject)
+		_, err := testNode.BadgerWrite(tempObject)
 		if err != nil {
 			t.Errorf("ggwp %v ", err)
 		}
@@ -265,11 +265,11 @@ func TestWriteConflictClientCarts(t *testing.T) {
 		}}
 
 	for i := 0; i < len(testItems); i++ {
-		err := testNode.BadgerWrite(testItems[i].c1)
+		_, err := testNode.BadgerWrite(testItems[i].c1)
 		if err != nil {
 			t.Errorf("Writing error: %v", err.Error())
 		}
-		err = testNode.BadgerWrite(testItems[i].c2)
+		_, err = testNode.BadgerWrite(testItems[i].c2)
 		if err != nil {
 			t.Errorf("Writing error: %v", err.Error())
 		}
@@ -378,8 +378,7 @@ func TestOverwriteConflictClientCarts(t *testing.T) {
 			VectorClock: []int{1, 2, 3, 6, 5},
 		}}
 	testItems[2] = testItem{
-		//test whether two different merge => [A,B,C] vs [B,C,D] => [A,B,C,D]
-		c1: ClientCart{
+		c1: ClientCart{ // test delete
 			UserID: "75",
 			Item: map[int]ItemObject{
 				13: {
@@ -412,13 +411,8 @@ func TestOverwriteConflictClientCarts(t *testing.T) {
 					Name:     "Ruler",
 					Quantity: 1290, //smaller
 				},
-				14: {
-					Id:       14,
-					Name:     "scissors", //missing in c1
-					Quantity: 1290,
-				},
 			},
-			VectorClock: []int{10, 2, 3, 4, 5},
+			VectorClock: []int{10, 2, 3, 4, 6},
 		}, expected: ClientCart{
 			UserID: "75",
 			Item: map[int]ItemObject{
@@ -432,21 +426,16 @@ func TestOverwriteConflictClientCarts(t *testing.T) {
 					Name:     "Ruler",
 					Quantity: 1290, //smaller
 				},
-				14: {
-					Id:       14,
-					Name:     "scissors", //missing in c1
-					Quantity: 1290,
-				},
 			},
-			VectorClock: []int{10, 2, 3, 4, 5},
+			VectorClock: []int{10, 2, 3, 4, 6},
 		}}
 
 	for i := 0; i < len(testItems); i++ {
-		err := testNode.BadgerWrite(testItems[i].c1)
+		_, err := testNode.BadgerWrite(testItems[i].c1)
 		if err != nil {
 			t.Errorf("Writing error: %v", err.Error())
 		}
-		err = testNode.BadgerWrite(testItems[i].c2)
+		_, err = testNode.BadgerWrite(testItems[i].c2)
 		if err != nil {
 			t.Errorf("Writing error: %v", err.Error())
 		}
