@@ -17,7 +17,7 @@ import {
 } from "@chakra-ui/react";
 import { AddIcon, MinusIcon } from "@chakra-ui/icons";
 //test
-import { ITEM_ACTIONS } from "../reducers/ClientCartReducer";
+import { CLIENTCART_ACTIONS } from "../reducers/ClientCartReducer";
 import React, { useState } from "react";
 
 const CTable = ({ state, dispatch, toast, toastRef }) => {
@@ -43,7 +43,7 @@ const CTable = ({ state, dispatch, toast, toastRef }) => {
   //dispatching + , - , and del functions upon button press
   const itemAdd = (id) => {
     dispatch({
-      type: ITEM_ACTIONS.INCREMENT,
+      type: CLIENTCART_ACTIONS.INCREMENT,
       payload: { id, toast, toastRef, dispatch },
     });
   };
@@ -54,13 +54,13 @@ const CTable = ({ state, dispatch, toast, toastRef }) => {
       return;
     }
     dispatch({
-      type: ITEM_ACTIONS.DECREMENT,
+      type: CLIENTCART_ACTIONS.DECREMENT,
       payload: { id, toast, toastRef, dispatch },
     });
   };
   const itemDelete = () => {
     dispatch({
-      type: ITEM_ACTIONS.DELETE,
+      type: CLIENTCART_ACTIONS.DELETE,
       payload: { toDelete, toast, toastRef, dispatch },
     });
     onClose();

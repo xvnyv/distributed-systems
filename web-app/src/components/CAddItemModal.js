@@ -15,7 +15,7 @@ import {
 } from "@chakra-ui/react";
 
 import React, { useState } from "react";
-import { ITEM_ACTIONS } from "../reducers/ClientCartReducer";
+import { CLIENTCART_ACTIONS } from "../reducers/ClientCartReducer";
 
 const CAddItemModal = ({ state, dispatch }) => {
   // to control state of modal
@@ -55,7 +55,7 @@ const CAddItemModal = ({ state, dispatch }) => {
       return;
     }
     dispatch({
-      type: ITEM_ACTIONS.NEW,
+      type: CLIENTCART_ACTIONS.NEW,
       payload: { itemId, itemName, dispatch },
     });
     onClose();

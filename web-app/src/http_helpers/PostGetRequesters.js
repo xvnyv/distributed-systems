@@ -1,7 +1,7 @@
 // dependencies
 import { v4 as uuidv4 } from "uuid";
 //Helper functions
-import { ITEM_ACTIONS } from "../reducers/ClientCartReducer";
+import { CLIENTCART_ACTIONS } from "../reducers/ClientCartReducer";
 
 export const SendGetRequest = async (userId, dispatch) => {
   const res = await fetch(`http://localhost:8080/read-request?id=${userId}`, {
@@ -15,18 +15,21 @@ export const SendGetRequest = async (userId, dispatch) => {
         console.log("Success:", data.Data);
         if (data.Data.UserID === "") {
           dispatch({
-            type: ITEM_ACTIONS.CHANGE_USER,
+            type: CLIENTCART_ACTIONS.CHANGE_USER,
             payload: { UserID: userId, Item: {} },
           });
         } else {
-          dispatch({ type: ITEM_ACTIONS.CHANGE_USER, payload: data.Data });
+          dispatch({
+            type: CLIENTCART_ACTIONS.CHANGE_USER,
+            payload: data.Data,
+          });
         }
       });
     })
     .catch((err) => {
       console.log(err);
       dispatch({
-        type: ITEM_ACTIONS.CHANGE_USER,
+        type: CLIENTCART_ACTIONS.CHANGE_USER,
         payload: { UserID: userId, Item: {} },
       });
     });
@@ -56,7 +59,7 @@ export const SendPostRequest = async (item, toast, toastIdRef, dispatch) => {
         isClosable: true,
         position: "bottom-left",
       });
-      dispatch({ type: ITEM_ACTIONS.CHANGE_USER, payload: data.Data });
+      dispatch({ type: CLIENTCART_ACTIONS.UPDATE_STATE, payload: data.Data });
     })
     .catch((error) => {
       console.error("Error:", error);
