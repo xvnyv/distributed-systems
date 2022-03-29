@@ -87,7 +87,11 @@ func DetermineSuccess(requestType RequestType, respChannel <-chan ChannelResp, c
 					fails[resp.From] = resp.APIResp
 					if len(fails) >= REPLICATION_FACTOR-minSuccessCount+1 {
 						// too many nodes have failed -- return error to client
-						log.Printf("Failed operation for request type %v\n", requestType)
+						if resp.APIResp.Status == SIMULATE_FAIL {
+							log.Printf("Simulate failure operation for request type %v\n", requestType)
+						} else {
+							log.Printf("Failed operation for request type %v\n", requestType)
+						}
 						for i := 0; i < (minSuccessCount - len(successes)); i++ {
 							wg.Done()
 						}
@@ -121,6 +125,19 @@ func DetermineSuccess(requestType RequestType, respChannel <-chan ChannelResp, c
 		return true, successResps
 	}
 	return false, failResps
+}
+
+/*
+checks if node has fail count > 0,
+if yes, decrement fail count return true.
+else, return false.
+*/
+func (n *Node) hasFailed() bool {
+	if n.FailCount > 0 {
+		n.FailCount--
+		return true
+	}
+	return false
 }
 
 func OrderedIntArrayEqual(a, b []int) bool {

@@ -47,3 +47,6 @@ POST http://localhost:8000/write
     },
     "VectorClock": [0, 1, 1]
 }
+
+### Simulate fail node
+GET http://localhost:8000/simulate-fail?count=5

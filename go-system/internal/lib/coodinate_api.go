@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"sync"
+	"time"
 )
 
 /* Write would need: ItemID, ItemName, ItemQuantity and UserID.
@@ -50,13 +51,44 @@ func (n *Node) sendWriteRequests(c ClientCart, nodes [REPLICATION_FACTOR]NodeDat
 		go n.sendWriteRequest(c, node, respChannel)
 	}
 
-	// TODO: DETECT NODE FAILURE IN DETERMINE SUCCESS
 	return DetermineSuccess(WRITE, respChannel, coordMutex)
+}
+
+/* Send requests to unresponsive nodes concurrently and wait for minimum required nodes to succeed */
+func (n *Node) hintedWriteRequest(c ClientCart, node NodeData) {
+	// resps contains the failed nodes' responses
+	var respChannel = make(chan ChannelResp, 10)
+	timer := time.NewTimer(time.Minute * 5)
+	ticker := time.NewTicker(time.Second * 3)
+	for {
+		select {
+		case <-ticker.C:
+			go n.sendWriteRequest(c, node, respChannel)
+			resp := <-respChannel
+			if resp.APIResp.Status == SUCCESS {
+				// great
+				ticker.Stop()
+				timer.Stop()
+				log.Printf("Node %v has revived \n", n.Id)
+				return
+			}
+		case <-timer.C:
+			// end liao
+			log.Printf("Node %v permanently failed\n", n.Id)
+			ticker.Stop()
+			return
+		}
+	}
 }
 
 /* Message handler for write requests for external API to client application */
 func (n *Node) handleWriteRequest(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Coordinator Node:%v WRITE REQUEST FROM CLIENT RECEIVED \n", n.Id)
+
+	// ? FEATURE: if node fails, it can still coordinate so that hinted handoff will be executed.
+	// ? If we allow coordinator to fail, the write request gets dropped without any backup
+	// ? TBC whether coordinator should fail...
+
 	var c ClientCart
 	body, _ := ioutil.ReadAll(r.Body)
 	err := json.Unmarshal(body, &c)
@@ -98,6 +130,13 @@ func (n *Node) handleWriteRequest(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(201)
 	} else {
 		w.WriteHeader(500)
+		for id := range resps {
+			for _, nodeData := range n.NodeMap {
+				if nodeData.Id == id {
+					go n.hintedWriteRequest(c, nodeData)
+				}
+			}
+		}
 	}
 	w.Header().Set("Content-Type", "application/json")
 	coordMutex.Lock()
@@ -187,6 +226,7 @@ func (n *Node) HandleRequests() {
 	// Internal API
 	http.HandleFunc("/read", n.FulfilReadRequest)
 	http.HandleFunc("/write", n.FulfilWriteRequest)
+	http.HandleFunc("/simulate-fail", n.SimulateFailRequest)
 	// http.HandleFunc("/write-success", handleMessage2)
 	// http.HandleFunc("/read-success", handleMessage2)
 	// http.HandleFunc("/join-request", handleMessage2)

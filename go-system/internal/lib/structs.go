@@ -22,6 +22,7 @@ type Node struct {
 	Successors   []int
 	Predecessors []int
 	BadgerLock   *sync.Mutex
+	FailCount    int
 }
 
 type Message struct {
