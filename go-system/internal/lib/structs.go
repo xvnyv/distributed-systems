@@ -42,6 +42,11 @@ type ClientCart struct {
 	VectorClock []int
 }
 
+type BadgerObject struct {
+	UserID   string
+	Versions []ClientCart
+}
+
 type ItemObject struct {
 	Id       int
 	Name     string
@@ -51,7 +56,7 @@ type ItemObject struct {
 type APIResp struct {
 	//standard API response
 	Status STATUS_TYPE
-	Data   ClientCart //json
+	Data   BadgerObject //json
 	Error  string
 }
 

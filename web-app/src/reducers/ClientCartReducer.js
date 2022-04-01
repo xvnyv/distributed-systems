@@ -46,18 +46,17 @@ export const clientCartReducer = (state, action) => {
       return action.payload;
     case CLIENTCART_ACTIONS.UPDATE_STATE:
       if (vectorClockSmaller(state.VectorClock, action.payload.VectorClock)) {
-        console.log("overwrite possible");
         return action.payload;
       }
       return state;
   }
 
-  const result = SendPostRequest(
-    newState,
-    action.payload.toast,
-    action.payload.toastRef,
-    action.payload.dispatch
-  );
+  // const result = SendPostRequest(
+  //   newState,
+  //   action.payload.toast,
+  //   action.payload.toastRef,
+  //   action.payload.dispatch
+  // );
 
   return newState;
 };

@@ -16,7 +16,7 @@ func (n *Node) FulfilWriteRequest(w http.ResponseWriter, r *http.Request) {
 	log.Println("Write request received: ", c)
 
 	n.BadgerLock.Lock()
-	c, err := n.BadgerWrite(c)
+	badgerObject, err := n.BadgerWrite(c)
 	n.BadgerLock.Unlock()
 
 	resp := APIResp{}
@@ -35,7 +35,7 @@ func (n *Node) FulfilWriteRequest(w http.ResponseWriter, r *http.Request) {
 		resp.Error = err.Error()
 	} else {
 		w.WriteHeader(201)
-		resp.Data = c
+		resp.Data = badgerObject
 		resp.Status = SUCCESS
 	}
 
@@ -48,7 +48,7 @@ func (n *Node) FulfilWriteRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Write(jsonResp)
-	log.Println("Write request completed for", c)
+	log.Println("Write request completed for", badgerObject)
 }
 
 func (n *Node) FulfilReadRequest(w http.ResponseWriter, r *http.Request) {
@@ -58,7 +58,7 @@ func (n *Node) FulfilReadRequest(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("Read Request received with key: ", userId)
 
-	c, err := n.BadgerRead(userId)
+	badgerObject, err := n.BadgerRead(userId)
 
 	resp := APIResp{}
 
@@ -77,7 +77,7 @@ func (n *Node) FulfilReadRequest(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error: %v", err)
 	} else {
 		w.WriteHeader(200)
-		resp.Data = c
+		resp.Data = badgerObject
 		resp.Status = SUCCESS
 	}
 
@@ -91,7 +91,7 @@ func (n *Node) FulfilReadRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Write(jsonResp)
-	log.Println("Read request completed for", c)
+	log.Println("Read request completed for", badgerObject)
 }
 
 func (n *Node) SimulateFailRequest(w http.ResponseWriter, r *http.Request) {

@@ -42,7 +42,7 @@ var keylst []string = make([]string, 0)
 
 func TestBadgerReadWriteDelete(t *testing.T) {
 
-	_, err := testNode.BadgerWrite(testData)
+	_, err := testNode.BadgerWrite(WriteMessage{0, testData, false})
 	if err != nil {
 		t.Fatal("Write Failed")
 	}
@@ -79,7 +79,7 @@ func TestBadgerGetKeys(t *testing.T) {
 			VectorClock: []int{i, i, i, i, i, i, i, i},
 		}
 		keylst = append(keylst, tempObject.UserID)
-		_, err := testNode.BadgerWrite(tempObject)
+		_, err := testNode.BadgerWrite(WriteMessage{0, tempObject, false})
 		if err != nil {
 			t.Errorf("ggwp %v ", err)
 		}
@@ -265,11 +265,11 @@ func TestWriteConflictClientCarts(t *testing.T) {
 		}}
 
 	for i := 0; i < len(testItems); i++ {
-		_, err := testNode.BadgerWrite(testItems[i].c1)
+		_, err := testNode.BadgerWrite(WriteMessage{0, testItems[i].c1, false})
 		if err != nil {
 			t.Errorf("Writing error: %v", err.Error())
 		}
-		_, err = testNode.BadgerWrite(testItems[i].c2)
+		_, err = testNode.BadgerWrite(WriteMessage{0, testItems[i].c2, false})
 		if err != nil {
 			t.Errorf("Writing error: %v", err.Error())
 		}
@@ -431,11 +431,11 @@ func TestOverwriteConflictClientCarts(t *testing.T) {
 		}}
 
 	for i := 0; i < len(testItems); i++ {
-		_, err := testNode.BadgerWrite(testItems[i].c1)
+		_, err := testNode.BadgerWrite(WriteMessage{0, testItems[i].c1, false})
 		if err != nil {
 			t.Errorf("Writing error: %v", err.Error())
 		}
-		_, err = testNode.BadgerWrite(testItems[i].c2)
+		_, err = testNode.BadgerWrite(WriteMessage{0, testItems[i].c2, false})
 		if err != nil {
 			t.Errorf("Writing error: %v", err.Error())
 		}

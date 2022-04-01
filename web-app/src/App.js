@@ -15,6 +15,7 @@ import { SendGetRequest } from "./http_helpers/PostGetRequesters";
 // import components
 import CTable from "./components/CTable";
 import CAddItemModal from "./components/CAddItemModal";
+import { mergeVersions } from "./utils/merge";
 
 var clientCartObject = {
   UserID: "SAMPLE",
@@ -30,7 +31,7 @@ var clientCartObject = {
       Quantity: 1,
     },
   },
-  VectorClock: [1, 2, 3, 4],
+  VectorClock: [1, 2, 3234, 4],
 };
 
 function App() {

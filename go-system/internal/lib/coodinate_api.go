@@ -22,7 +22,9 @@ Read will obtain information from UserID.
 
 /* Send individual internal write request to each node */
 func (n *Node) sendWriteRequest(c ClientCart, node NodeData, respChannel chan<- ChannelResp) {
+
 	jsonData, _ := json.Marshal(c)
+
 	resp, err := http.Post(fmt.Sprintf("%s/write", node.Ip), "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		log.Println("Send Write Request Error: ", err)
@@ -94,7 +96,7 @@ func (n *Node) handleWriteRequest(w http.ResponseWriter, r *http.Request) {
 	err := json.Unmarshal(body, &c)
 	if err != nil {
 		w.WriteHeader(400)
-		json.NewEncoder(w).Encode(APIResp{FAIL, ClientCart{}, "JSON decoding error"})
+		json.NewEncoder(w).Encode(APIResp{FAIL, BadgerObject{}, "JSON decoding error"})
 		log.Printf("Handle Write Request Error: %v\n", err)
 		return
 	}
@@ -113,17 +115,15 @@ func (n *Node) handleWriteRequest(w http.ResponseWriter, r *http.Request) {
 	if c.VectorClock == nil {
 		c.VectorClock = []int{}
 		for i := 0; i < len(n.NodeMap); i++ {
-			if i == n.Id {
-				c.VectorClock = append(c.VectorClock, 1)
-			} else {
-				c.VectorClock = append(c.VectorClock, 0)
-			}
+			c.VectorClock = append(c.VectorClock, 0)
 		}
-	} else {
-		c.VectorClock[n.Id]++
 	}
 
 	var coordMutex sync.Mutex
+
+	// update vector clock using coordinator's ID
+	c.VectorClock[n.Id] += 1
+
 	success, resps := n.sendWriteRequests(c, responsibleNodes, &coordMutex)
 
 	if success {
@@ -213,11 +213,16 @@ func (n *Node) handleReadRequest(w http.ResponseWriter, r *http.Request) {
 	// TODO: change this part when handling conflict -- right now we are just returning one cart version
 	// might have to change the APIResp object to return an array of carts instead so that
 	// we can return the conflicting versions
+
+	// check
+
 	for _, v := range resps {
 		json.NewEncoder(w).Encode(v)
 		break
+
 	}
 	coordMutex.Unlock()
+
 }
 
 // ========== END COORDINATOR READ ==========

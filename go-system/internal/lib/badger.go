@@ -8,49 +8,50 @@ import (
 	badger "github.com/dgraph-io/badger/v3"
 )
 
-func (n *Node) BadgerWrite(c ClientCart) (ClientCart, error) {
+// TODO: struct badger client cart
+// logic for writing array
+
+func (n *Node) BadgerWrite(c ClientCart) (BadgerObject, error) {
 	opts := badger.DefaultOptions(fmt.Sprintf("tmp/%v/badger", n.Id))
 	opts.Logger = nil
 
-	toWrite := ClientCart{}
-	lastWritten, err := n.BadgerRead(c.UserID)
+	toWrite := BadgerObject{}
+	userid := c.UserID
+	// if conflict, no need to read
+
+	lastWritten, err := n.BadgerRead(userid)
 	if err != nil {
 		if err.Error() == "Key not found" {
-			toWrite = c
-			fmt.Printf("Key not found, writing %v\n", c)
+			toWrite = BadgerObject{UserID: userid, Versions: []ClientCart{c}}
+			fmt.Printf("Key not found, writing %v\n", toWrite)
 			//do nothing
 		} else {
-			return c, err
+			return BadgerObject{}, err // Error, return empty client cart
 		}
 	} else {
-		//check whether current vector clock smaller than received
-		fmt.Printf("found previous verison: %v\n", lastWritten.VectorClock)
-		fmt.Printf("comparing with new version: %v\n", c.VectorClock)
-
-		if VectorClockSmaller(lastWritten.VectorClock, c.VectorClock) {
-			fmt.Println("current value in db vector clock smaller than new write val: Overwrite")
-			toWrite = c
-		} else if VectorClockSmaller(c.VectorClock, lastWritten.VectorClock) {
-			// no need to write
-			return lastWritten, nil
-		} else {
-			fmt.Println("current value in db vector clock vs new write val ambiguos: Merge")
-			toWrite = MergeClientCarts(lastWritten, c)
+		//iterate through the versions, check whether can overwrite
+		newVersions := []ClientCart{}
+		for i := 0; i < len(lastWritten.Versions); i++ {
+			if VectorClockSmaller(lastWritten.Versions[i].VectorClock, c.VectorClock) {
+				continue
+			}
+			newVersions = append(newVersions, lastWritten.Versions[i])
 		}
+		newVersions = append(newVersions, c)
+
+		lastWritten.Versions = newVersions
+		toWrite = lastWritten
 	}
 
 	db, err := badger.Open(opts)
 	if err != nil {
 		log.Printf("Badger Error: %v\n", err)
-		return c, err
+		return BadgerObject{}, err
 	}
 	defer db.Close()
 
 	err = db.Update(func(txn *badger.Txn) error {
 		//need convert DataObject to byte array
-		if c.UserID == "" {
-			log.Println("No UserId. Object is:", toWrite)
-		}
 		dataObjectBytes, _ := json.Marshal(toWrite)
 		err := txn.Set([]byte(toWrite.UserID), dataObjectBytes)
 		if err != nil {
@@ -59,28 +60,30 @@ func (n *Node) BadgerWrite(c ClientCart) (ClientCart, error) {
 		return nil
 	})
 	if err != nil {
-		return c, err
+		return BadgerObject{}, err
 	}
 
-	return toWrite, nil
+	// NOTE: returning badger object with one version DESPITE badger object possibly
+	// having MULTIPLE versions
+	return BadgerObject{UserID: userid, Versions: []ClientCart{c}}, nil
 }
 
 /**
 Returns empty DataObject if there is an error reading from the database with the provided key.
 */
-func (n *Node) BadgerRead(key string) (ClientCart, error) {
+func (n *Node) BadgerRead(key string) (BadgerObject, error) {
 	opts := badger.DefaultOptions(fmt.Sprintf("tmp/%v/badger", n.Id))
 	opts.Logger = nil
 
 	db, err := badger.Open(opts)
 	if err != nil {
 		log.Printf("Badger Error: %v\n", err)
-		return ClientCart{}, err
+		return BadgerObject{}, err
 	}
 	defer db.Close()
 	// Your code here…
 
-	res := ClientCart{}
+	res := BadgerObject{}
 	err = db.View(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte(key))
 		if err != nil {

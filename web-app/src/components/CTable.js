@@ -19,6 +19,7 @@ import { AddIcon, MinusIcon } from "@chakra-ui/icons";
 //test
 import { CLIENTCART_ACTIONS } from "../reducers/ClientCartReducer";
 import React, { useState } from "react";
+import { SendPostRequest } from "../http_helpers/PostGetRequesters";
 
 const CTable = ({ state, dispatch, toast, toastRef }) => {
   //delete alert
@@ -42,10 +43,14 @@ const CTable = ({ state, dispatch, toast, toastRef }) => {
 
   //dispatching + , - , and del functions upon button press
   const itemAdd = (id) => {
-    dispatch({
-      type: CLIENTCART_ACTIONS.INCREMENT,
-      payload: { id, toast, toastRef, dispatch },
-    });
+    const newState = {
+      ...state,
+      Item: {
+        ...state.Item,
+        [id]: { ...state.Item[id], Quantity: state.Item[id].Quantity + 1 },
+      },
+    };
+    SendPostRequest(newState, toast, toastRef, dispatch);
   };
   const itemSubtract = (id) => {
     if (state.Item[id].Quantity === 1) {
@@ -53,16 +58,19 @@ const CTable = ({ state, dispatch, toast, toastRef }) => {
       onOpen();
       return;
     }
-    dispatch({
-      type: CLIENTCART_ACTIONS.DECREMENT,
-      payload: { id, toast, toastRef, dispatch },
-    });
+    const newState = {
+      ...state,
+      Item: {
+        ...state.Item,
+        [id]: { ...state.Item[id], Quantity: state.Item[id].Quantity - 1 },
+      },
+    };
+    SendPostRequest(newState, toast, toastRef, dispatch);
   };
   const itemDelete = () => {
-    dispatch({
-      type: CLIENTCART_ACTIONS.DELETE,
-      payload: { toDelete, toast, toastRef, dispatch },
-    });
+    delete state.Item[toDelete];
+    var newState = state;
+    SendPostRequest(newState, toast, toastRef, dispatch);
     onClose();
   };
 

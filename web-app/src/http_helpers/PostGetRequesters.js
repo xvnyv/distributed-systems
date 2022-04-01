@@ -2,6 +2,7 @@
 import { v4 as uuidv4 } from "uuid";
 //Helper functions
 import { CLIENTCART_ACTIONS } from "../reducers/ClientCartReducer";
+import { mergeVersions } from "../utils/merge";
 
 export const SendGetRequest = async (userId, dispatch) => {
   const res = await fetch(`http://localhost:8080/read-request?id=${userId}`, {
@@ -21,7 +22,7 @@ export const SendGetRequest = async (userId, dispatch) => {
         } else {
           dispatch({
             type: CLIENTCART_ACTIONS.CHANGE_USER,
-            payload: data.Data,
+            payload: mergeVersions(data.Data),
           });
         }
       });
@@ -38,9 +39,8 @@ export const SendGetRequest = async (userId, dispatch) => {
 
 export const SendPostRequest = async (item, toast, toastIdRef, dispatch) => {
   item["Guid"] = uuidv4();
-  console.log(item);
   console.log("sending");
-  fetch(`http://localhost:8080/write-request`, {
+  await fetch(`http://localhost:8080/write-request`, {
     method: "POST",
     headers: {
       "Content-type": "application/json",
@@ -54,12 +54,16 @@ export const SendPostRequest = async (item, toast, toastIdRef, dispatch) => {
         title: "Saved",
         status: "success",
         description:
-          "User's cart updated with vector clock :" + data.Data.VectorClock,
+          "User's cart updated with vector clock :" +
+          data.Data.Versions[0].VectorClock,
         duration: 2000,
         isClosable: true,
         position: "bottom-left",
       });
-      dispatch({ type: CLIENTCART_ACTIONS.UPDATE_STATE, payload: data.Data });
+      dispatch({
+        type: CLIENTCART_ACTIONS.UPDATE_STATE,
+        payload: data.Data.Versions[0],
+      });
     })
     .catch((error) => {
       console.error("Error:", error);
