@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"sync"
 
 	lib "github.com/distributed-systems/go-system/internal/lib"
 )
@@ -30,8 +31,9 @@ func main() {
 		// TODO: REMOVE THIS SECTION WHEN IMPLEMENTING JOINING
 		pos = *posPtr
 	}
+	var badgerLock sync.Mutex
 
-	node := lib.Node{Id: *idFlagPtr, Ip: fmt.Sprintf("http://127.0.0.1:%d", *portFlagPtr), Port: *portFlagPtr, Position: pos, NodeMap: lib.TEMP_NODE_MAP}
+	node := lib.Node{Id: *idFlagPtr, Ip: fmt.Sprintf("http://127.0.0.1:%d", *portFlagPtr), Port: *portFlagPtr, Position: pos, NodeMap: lib.TEMP_NODE_MAP, BadgerLock: &badgerLock}
 	log.Printf("Node %d started\n", node.Id)
 	go node.HandleRequests()
 

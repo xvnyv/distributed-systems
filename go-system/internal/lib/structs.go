@@ -1,5 +1,7 @@
 package lib
 
+import "sync"
+
 type MessageType int
 
 type NodeData struct {
@@ -19,6 +21,8 @@ type Node struct {
 	NodeMap      NodeMap
 	Successors   []int
 	Predecessors []int
+	BadgerLock   *sync.Mutex
+	FailCount    int
 }
 
 type Message struct {
@@ -38,6 +42,11 @@ type ClientCart struct {
 	VectorClock []int
 }
 
+type BadgerObject struct {
+	UserID   string
+	Versions []ClientCart
+}
+
 type ItemObject struct {
 	Id       int
 	Name     string
@@ -47,7 +56,7 @@ type ItemObject struct {
 type APIResp struct {
 	//standard API response
 	Status STATUS_TYPE
-	Data   ClientCart //json
+	Data   BadgerObject //json
 	Error  string
 }
 
