@@ -52,12 +52,54 @@ func (n *Node) GetResponsibleNodes(keyPos int) [REPLICATION_FACTOR]NodeData {
 	return responsibleNodes
 }
 
-func DetermineSuccess(requestType RequestType, respChannel <-chan ChannelResp, coordMutex *sync.Mutex) (bool, map[int]APIResp) {
-	// As long as (REPLICATION_FACTOR - MIN_WRITE_SUCCESS + 1) nodes fail, we return an error to the client
-	// It does not matter if 1 node has already successfully written to disk even if the entire operation fails
-	// We let the client execute a read before retrying the write to handle that case
-	// Inspired by DynamoDB: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Programming.Errors.html
+func (n *Node) GetNewPosition() int {
+	/*
+		Largest gap between all node positions will be found and the middle position of this largest gap will be returned.
 
+		Middle position will be calculated as:
+		- If odd number of positions, middle position is taken (eg. {0,1,2} will mean 1 is chosen)
+		- If even number of positions, lower middle position is taken (eg. {0,1,2,3} will mean 1 is chosen)
+
+		When calculating the new position, the indexes that we use to find the gap are excluded from the available spots.
+		Eg. to find which position should be selected from {3,4,5,6}, we take (7-2)/2+2=4 (2 and 7 are excluded from available spots)
+
+		Returns position for new node, -1 if ring is full and new node cannot join
+	*/
+	posArr := []int{}
+	for pos, _ := range n.NodeMap {
+		posArr = append(posArr, pos)
+	}
+	if len(posArr) == 1 {
+		// only one node in the system -- used total ring positions to calculate new position
+		return (NUM_RING_POSITIONS-posArr[0])/2 + posArr[0]
+	}
+	sort.Ints(posArr)
+	// handle finding gap in loop back from largest to smallest index first
+	largestGap := (posArr[0] + NUM_RING_POSITIONS) - posArr[-1]
+	largestGapLowerIndex := posArr[-1]
+	// find largest gap in the rest of the ring
+	for i := 0; i < len(posArr)-1; i++ {
+		gap := posArr[i+1] - posArr[i]
+		if gap > largestGap {
+			largestGap = gap
+			largestGapLowerIndex = i
+		}
+	}
+
+	if largestGap == 1 {
+		// ring is full
+		return -1
+	}
+	return (largestGap/2 + largestGapLowerIndex) % NUM_RING_POSITIONS
+}
+
+func DetermineSuccess(requestType RequestType, respChannel <-chan ChannelResp, coordMutex *sync.Mutex) (bool, map[int]APIResp) {
+	/*
+		As long as (REPLICATION_FACTOR - MIN_WRITE_SUCCESS + 1) nodes fail, we return an error to the client
+		It does not matter if 1 node has already successfully written to disk even if the entire operation fails
+		We let the client execute a read before retrying the write to handle that case
+		Inspired by DynamoDB: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Programming.Errors.html
+	*/
 	successResps := map[int]APIResp{}
 	failResps := map[int]APIResp{}
 	var wg sync.WaitGroup

@@ -72,3 +72,28 @@ func (n *Node) FulfilReadRequest(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonResp)
 	log.Println("Read request completed for", c)
 }
+
+/* Calculate new node position and send position to new node */
+func (n *Node) handleJoinRequest(w http.ResponseWriter, r *http.Request) {
+	// calculate new node position
+	newPos := n.GetNewPosition()
+
+	w.Header().Set("Content-Type", "application/json")
+
+	if newPos == -1 {
+		// ring is full, send error to new node
+		log.Printf("Error: cannot find position for new node, ring is full")
+		w.WriteHeader(409)
+		return
+	}
+	w.WriteHeader(200)
+	// send back newPos
+}
+
+func (n *Node) handleJoinOffer() {
+
+}
+
+func (n *Node) handleJoinBroadcast() {
+
+}
