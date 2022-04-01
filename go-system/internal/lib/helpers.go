@@ -90,7 +90,7 @@ func (n *Node) GetNewPosition() int {
 		// ring is full
 		return -1
 	}
-	return (largestGap/2 + largestGapLowerIndex) % NUM_RING_POSITIONS
+	return (largestGap/2 + posArr[largestGapLowerIndex]) % NUM_RING_POSITIONS
 }
 
 func DetermineSuccess(requestType RequestType, respChannel <-chan ChannelResp, coordMutex *sync.Mutex) (bool, map[int]APIResp) {

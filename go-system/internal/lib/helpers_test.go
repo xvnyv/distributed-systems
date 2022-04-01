@@ -1,11 +1,113 @@
 package lib
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 func TestHashMD5(t *testing.T) {
 	s := "testing"
 	got := HashMD5(s)
 	want := 1
+
+	if got != want {
+		t.Errorf("Expected %d, got %d", want, got)
+	}
+}
+
+func TestGetNewPositionOdd(t *testing.T) {
+	testNodeMap := NodeMap{
+		0: NodeData{
+			Id:       0,
+			Ip:       fmt.Sprintf("%s:%d", BASE_URL, 8000),
+			Position: 0,
+		},
+		50: NodeData{
+			Id:       1,
+			Ip:       fmt.Sprintf("%s:%d", BASE_URL, 8001),
+			Position: 50,
+		},
+		25: NodeData{
+			Id:       2,
+			Ip:       fmt.Sprintf("%s:%d", BASE_URL, 8002),
+			Position: 25,
+		},
+		75: NodeData{
+			Id:       3,
+			Ip:       fmt.Sprintf("%s:%d", BASE_URL, 8003),
+			Position: 75,
+		},
+		12: NodeData{
+			Id:       4,
+			Ip:       fmt.Sprintf("%s:%d", BASE_URL, 8004),
+			Position: 12,
+		},
+	}
+	n := Node{Id: 4, Ip: fmt.Sprintf("%s:%d", BASE_URL, 8004), Port: 8004, NodeMap: testNodeMap}
+	got := n.GetNewPosition()
+	want := 87
+
+	if got != want {
+		t.Errorf("Expected %d, got %d", want, got)
+	}
+}
+
+func TestGetNewPositionEven(t *testing.T) {
+	testNodeMap := NodeMap{
+		0: NodeData{
+			Id:       0,
+			Ip:       fmt.Sprintf("%s:%d", BASE_URL, 8000),
+			Position: 0,
+		},
+		50: NodeData{
+			Id:       1,
+			Ip:       fmt.Sprintf("%s:%d", BASE_URL, 8001),
+			Position: 50,
+		},
+		25: NodeData{
+			Id:       2,
+			Ip:       fmt.Sprintf("%s:%d", BASE_URL, 8002),
+			Position: 25,
+		},
+	}
+	n := Node{Id: 2, Ip: fmt.Sprintf("%s:%d", BASE_URL, 8002), Port: 8002, NodeMap: testNodeMap}
+	got := n.GetNewPosition()
+	want := 75
+
+	if got != want {
+		t.Errorf("Expected %d, got %d", want, got)
+	}
+}
+
+func TestGetNewPositionOneItem(t *testing.T) {
+	testNodeMap := NodeMap{
+		0: NodeData{
+			Id:       0,
+			Ip:       fmt.Sprintf("%s:%d", BASE_URL, 8000),
+			Position: 0,
+		},
+	}
+	n := Node{Id: 0, Ip: fmt.Sprintf("%s:%d", BASE_URL, 8000), Port: 8000, NodeMap: testNodeMap}
+	got := n.GetNewPosition()
+	want := 50
+
+	if got != want {
+		t.Errorf("Expected %d, got %d", want, got)
+	}
+}
+
+func TestGetNewPositionFull(t *testing.T) {
+	testNodeMap := NodeMap{}
+	for i := 0; i < NUM_RING_POSITIONS; i++ {
+		testNodeMap[i] = NodeData{
+			Id:       i,
+			Ip:       fmt.Sprintf("%s:%d", BASE_URL, 8000+i),
+			Position: i,
+		}
+	}
+	n := Node{Id: 2, Ip: fmt.Sprintf("%s:%d", BASE_URL, 8002), Port: 8002, NodeMap: testNodeMap}
+	got := n.GetNewPosition()
+	want := -1
 
 	if got != want {
 		t.Errorf("Expected %d, got %d", want, got)
