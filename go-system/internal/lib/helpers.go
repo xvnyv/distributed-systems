@@ -55,6 +55,7 @@ func (n *Node) GetResponsibleNodes(keyPos int) [REPLICATION_FACTOR]NodeData {
 func (n *Node) GetNewPosition() int {
 	/*
 		Largest gap between all node positions will be found and the middle position of this largest gap will be returned.
+		Returns position for new node, -1 if ring is full and new node cannot join
 
 		Middle position will be calculated as:
 		- If odd number of positions, middle position is taken (eg. {0,1,2} will mean 1 is chosen)
@@ -62,8 +63,6 @@ func (n *Node) GetNewPosition() int {
 
 		When calculating the new position, the indexes that we use to find the gap are excluded from the available spots.
 		Eg. to find which position should be selected from {3,4,5,6}, we take (7-2)/2+2=4 (2 and 7 are excluded from available spots)
-
-		Returns position for new node, -1 if ring is full and new node cannot join
 	*/
 	posArr := []int{}
 	for pos, _ := range n.NodeMap {
@@ -75,8 +74,9 @@ func (n *Node) GetNewPosition() int {
 	}
 	sort.Ints(posArr)
 	// handle finding gap in loop back from largest to smallest index first
-	largestGap := (posArr[0] + NUM_RING_POSITIONS) - posArr[-1]
-	largestGapLowerIndex := posArr[-1]
+	lastIndex := len(posArr) - 1
+	largestGap := (posArr[0] + NUM_RING_POSITIONS) - posArr[lastIndex]
+	largestGapLowerIndex := lastIndex
 	// find largest gap in the rest of the ring
 	for i := 0; i < len(posArr)-1; i++ {
 		gap := posArr[i+1] - posArr[i]
@@ -85,7 +85,7 @@ func (n *Node) GetNewPosition() int {
 			largestGapLowerIndex = i
 		}
 	}
-
+	log.Printf("Largest gap is between position %d and %d\n", posArr[largestGapLowerIndex], posArr[(largestGapLowerIndex+1)%len(posArr)])
 	if largestGap == 1 {
 		// ring is full
 		return -1

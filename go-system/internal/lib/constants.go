@@ -8,6 +8,7 @@ const (
 	MIN_READ_SUCCESS   int    = 2
 	MIN_WRITE_SUCCESS  int    = 2
 	BASE_URL           string = "http://127.0.0.1"
+	LOAD_BALANCER_PORT int    = 8080
 )
 
 var TEMP_NODE_MAP NodeMap = NodeMap{

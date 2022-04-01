@@ -60,6 +60,17 @@ type APIResp struct {
 	Error  string
 }
 
+type JoinResp struct {
+	Status STATUS_TYPE
+	Data   JoinOfferObject //json
+	Error  string
+}
+
+type JoinOfferObject struct {
+	Position int
+	NodeMap  NodeMap
+}
+
 type ChannelResp struct {
 	From    int // node ID
 	APIResp APIResp

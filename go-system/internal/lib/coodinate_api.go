@@ -226,24 +226,3 @@ func (n *Node) handleReadRequest(w http.ResponseWriter, r *http.Request) {
 }
 
 // ========== END COORDINATOR READ ==========
-
-func (n *Node) HandleRequests() {
-	// Internal API
-	http.HandleFunc("/read", n.FulfilReadRequest)
-	http.HandleFunc("/write", n.FulfilWriteRequest)
-	http.HandleFunc("/simulate-fail", n.SimulateFailRequest)
-	// http.HandleFunc("/write-success", handleMessage2)
-	// http.HandleFunc("/read-success", handleMessage2)
-	http.HandleFunc("/join-request", n.handleJoinRequest)
-	http.HandleFunc("/join-offer", n.handleJoinOffer)
-	http.HandleFunc("/join-broadcast", n.handleJoinBroadcast)
-	// http.HandleFunc("/data-migration", handleMessage2)
-	// http.HandleFunc("/handover-request", handleMessage2)
-	// http.HandleFunc("/handover-success", handleMessage2)
-
-	// External API
-	http.HandleFunc("/write-request", n.handleWriteRequest)
-	http.HandleFunc("/read-request", n.handleReadRequest)
-
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", n.Port), nil))
-}
