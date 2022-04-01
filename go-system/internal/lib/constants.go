@@ -43,4 +43,5 @@ type STATUS_TYPE int
 const (
 	FAIL STATUS_TYPE = iota
 	SUCCESS
+	SIMULATE_FAIL
 )

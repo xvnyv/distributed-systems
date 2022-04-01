@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 func (n *Node) FulfilWriteRequest(w http.ResponseWriter, r *http.Request) {
@@ -14,16 +15,27 @@ func (n *Node) FulfilWriteRequest(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("Write request received: ", c)
 
-	err := n.BadgerWrite([]ClientCart{c})
+	n.BadgerLock.Lock()
+	badgerObject, err := n.BadgerWrite(c)
+	n.BadgerLock.Unlock()
 
 	resp := APIResp{}
+
+	if n.hasFailed() {
+		log.Printf("Request failed for node %v, fail count: %v\n", n.Id, n.FailCount)
+		w.WriteHeader(500)
+		resp.Status = SIMULATE_FAIL
+		resp.Error = "Node temporary failed."
+		return
+	}
+
 	if err != nil {
 		w.WriteHeader(500)
 		resp.Status = FAIL
 		resp.Error = err.Error()
 	} else {
 		w.WriteHeader(201)
-		resp.Data = c
+		resp.Data = badgerObject
 		resp.Status = SUCCESS
 	}
 
@@ -36,7 +48,7 @@ func (n *Node) FulfilWriteRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Write(jsonResp)
-	log.Println("Write request completed for", c)
+	log.Println("Write request completed for", badgerObject)
 }
 
 func (n *Node) FulfilReadRequest(w http.ResponseWriter, r *http.Request) {
@@ -46,9 +58,18 @@ func (n *Node) FulfilReadRequest(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("Read Request received with key: ", userId)
 
-	c, err := n.BadgerRead(userId)
+	badgerObject, err := n.BadgerRead(userId)
 
 	resp := APIResp{}
+
+	if n.hasFailed() {
+		log.Printf("Request failed for node %v, fail count: %v\n", n.Id, n.FailCount)
+		w.WriteHeader(500)
+		resp.Status = SIMULATE_FAIL
+		resp.Error = "Node temporary failed."
+		return
+	}
+
 	if err != nil {
 		w.WriteHeader(500)
 		resp.Status = FAIL
@@ -56,7 +77,7 @@ func (n *Node) FulfilReadRequest(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error: %v", err)
 	} else {
 		w.WriteHeader(200)
-		resp.Data = c
+		resp.Data = badgerObject
 		resp.Status = SUCCESS
 	}
 
@@ -70,5 +91,16 @@ func (n *Node) FulfilReadRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Write(jsonResp)
-	log.Println("Read request completed for", c)
+	log.Println("Read request completed for", badgerObject)
+}
+
+func (n *Node) SimulateFailRequest(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+
+	count, err := strconv.Atoi(query.Get("count")) //! type string
+	if err != nil {
+		log.Println("Error with simluate fail request", err)
+	}
+
+	n.FailCount = count
 }
