@@ -96,6 +96,8 @@ function App() {
             <CAddItemModal
               state={clientCartState}
               dispatch={clientCartDispatch}
+              appToast={toast}
+              appToastRef={toastIdRef}
             />
             {/* <CAddUserModal state={state} dispatch={dispatch} /> */}
           </Box>

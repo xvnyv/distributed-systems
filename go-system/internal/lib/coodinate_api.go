@@ -113,9 +113,9 @@ func (n *Node) handleWriteRequest(w http.ResponseWriter, r *http.Request) {
 	// If vector clock is provided, check the nodes to ensure that the provided version exists,
 	// then update all replicas to the same cart and vector clock versions to ensure eventual consistency
 	if c.VectorClock == nil {
-		c.VectorClock = []int{}
+		c.VectorClock = make(map[int]int, 0)
 		for i := 0; i < len(n.NodeMap); i++ {
-			c.VectorClock = append(c.VectorClock, 0)
+			c.VectorClock[i] = 0
 		}
 	}
 

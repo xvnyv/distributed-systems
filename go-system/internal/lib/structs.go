@@ -39,7 +39,7 @@ type Message struct {
 type ClientCart struct {
 	UserID      string
 	Item        map[int]ItemObject
-	VectorClock []int
+	VectorClock map[int]int // {coordinatorId: verstion_number}
 }
 
 type BadgerObject struct {

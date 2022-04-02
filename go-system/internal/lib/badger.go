@@ -31,13 +31,20 @@ func (n *Node) BadgerWrite(c ClientCart) (BadgerObject, error) {
 	} else {
 		//iterate through the versions, check whether can overwrite
 		newVersions := []ClientCart{}
+		add := true
 		for i := 0; i < len(lastWritten.Versions); i++ {
 			if VectorClockSmaller(lastWritten.Versions[i].VectorClock, c.VectorClock) {
+				// don't add to new versions if incoming can override
 				continue
+			}
+			if VectorClockSmaller(c.VectorClock, lastWritten.Versions[i].VectorClock) {
+				add = false
 			}
 			newVersions = append(newVersions, lastWritten.Versions[i])
 		}
-		newVersions = append(newVersions, c)
+		if add {
+			newVersions = append(newVersions, c)
+		}
 
 		lastWritten.Versions = newVersions
 		toWrite = lastWritten
