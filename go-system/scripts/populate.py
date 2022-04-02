@@ -1,22 +1,3 @@
-"""
-fetch(`http://localhost:8080/write-request`, {
-    method: "POST",
-    headers: {
-      "Content-type": "application/json",
-    },
-    body: JSON.stringify(item),
-  })
-  
-{
-    UserID: "SAMPLE",
-    Item: {
-        1: {Id: 1, Name: "pencil", Quantity: 3},
-        3: {Id: 3, Name: "paper", Quantity: 1}
-    },
-    VectorClock: [1, 2, 3234, 4],
-    Guid: "a257b9ea-3af4-4a8b-b6e8-cfd9b890eadf"
-}
-"""
 import random
 import requests
 
@@ -50,5 +31,4 @@ for userid in USERIDS:
     data = {"UserID": userid, "Item": items}
     res = requests.post(ENDPOINT, json=data)
     
-    if res.status_code != 200:
-        print(res.text)
+    print(res.text)
