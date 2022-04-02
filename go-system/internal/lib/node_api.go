@@ -9,7 +9,10 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"sync"
 )
+
+var joinWg sync.WaitGroup
 
 func (n *Node) FulfilWriteRequest(w http.ResponseWriter, r *http.Request) {
 	var c ClientCart
@@ -152,6 +155,7 @@ func (n *Node) handleJoinBroadcast(w http.ResponseWriter, r *http.Request) {
 		Node 1 can also delete the keys at (75,0] and
 		node 4 can delete the keys at (0-12].
 	*/
+	log.Printf("Endpoint /join-broadcast hit: %+v\n", r)
 	var newNode NodeData
 	body, _ := ioutil.ReadAll(r.Body)
 	json.Unmarshal(body, &newNode)
@@ -193,12 +197,13 @@ func (n *Node) handleJoinBroadcast(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			resp.Data = migrateData
-			log.Printf("Data migration of keys at (%d, %d] completed\n", start, end)
+			log.Printf("Migration of %d keys at (%d, %d] completed\n", len(migrateData), start, end)
 		}
 
 		// check if node can delete any keys
 		if shouldDeleteData {
 			start, end := n.CalculateKeyset(DELETE)
+			count := 0
 			for _, key := range allKeys {
 				if KeyInRange(key, start, end) {
 					err := n.BadgerDelete([]string{key})
@@ -207,9 +212,10 @@ func (n *Node) handleJoinBroadcast(w http.ResponseWriter, r *http.Request) {
 						w.WriteHeader(500)
 						return
 					}
+					count++
 				}
 			}
-			log.Printf("Data deletion at (%d, %d] completed\n", start, end)
+			log.Printf("Deletion of %d keys at (%d, %d] completed\n", count, start, end)
 		}
 	}
 
@@ -242,6 +248,42 @@ func (n *Node) HandleRequests() {
 	http.HandleFunc("/read-request", n.handleReadRequest)
 
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", n.Port), nil))
+}
+
+func (n *Node) sendJoinBroadcast(nodeData NodeData, jsonData []byte) {
+	resp, err := http.Post(fmt.Sprintf("%s/join-broadcast", nodeData.Ip), "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		// end program if cannot announce join
+		log.Fatalf("Join Broadcast Error: %s\n", err)
+	}
+
+	defer resp.Body.Close()
+	// parse API response
+	apiResp := MigrateResp{}
+	body, _ := io.ReadAll(resp.Body)
+	json.Unmarshal(body, &apiResp)
+
+	log.Printf("Received JOIN BROADCAST response from Node %d with status code %d\n", nodeData.Id, resp.StatusCode)
+
+	// handle API response
+	if resp.StatusCode != 200 {
+		// end program if cannot join
+		log.Fatalf("Join Broadcast Error: %s\n", apiResp.Error)
+	}
+
+	// store migrated data
+	if apiResp.Data != nil {
+		n.BadgerMigrateWrite(apiResp.Data)
+		log.Printf("%d records stored\n", len(apiResp.Data))
+		// for debugging purposes
+		keys := []string{}
+		for _, data := range apiResp.Data {
+			keys = append(keys, data.UserID)
+		}
+		log.Printf("Keys stored: %v", keys)
+	}
+
+	joinWg.Done()
 }
 
 func (n *Node) JoinSystem(init bool) {
@@ -280,32 +322,10 @@ func (n *Node) JoinSystem(init bool) {
 	jsonData, _ := json.Marshal(newNodeData)
 	// announce position to all other nodes
 	for _, nodeData := range n.NodeMap {
-		resp, err := http.Post(fmt.Sprintf("%s/join-broadcast", nodeData.Ip), "application/json", bytes.NewBuffer(jsonData))
-		if err != nil {
-			// end program if cannot announce join
-			log.Fatalf("Join Broadcast Error: %s\n", err)
-		}
-
-		defer resp.Body.Close()
-		// parse API response
-		apiResp := MigrateResp{}
-		body, _ := io.ReadAll(resp.Body)
-		json.Unmarshal(body, &apiResp)
-
-		log.Printf("Received JOIN BROADCAST response from Node %d with status code %d\n", nodeData.Id, resp.StatusCode)
-
-		// handle API response
-		if resp.StatusCode != 200 {
-			// end program if cannot join
-			log.Fatalf("Join Broadcast Error: %s\n", apiResp.Error)
-		}
-
-		// store migrated data
-		if apiResp.Data != nil {
-			n.BadgerMigrateWrite(apiResp.Data)
-			log.Printf("%d records stored\n", len(apiResp.Data))
-		}
+		joinWg.Add(1)
+		go n.sendJoinBroadcast(nodeData, jsonData)
 	}
+	joinWg.Wait()
 	n.NodeMap[n.Position] = newNodeData
 	log.Println("Joining process completed")
 }
