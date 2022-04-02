@@ -73,10 +73,9 @@ func (n *Node) GetNewPosition() int {
 		// only one node in the system -- used total ring positions to calculate new position
 		return (NUM_RING_POSITIONS-posArr[0])/2 + posArr[0]
 	}
-	// handle finding gap in loop back from largest to smallest index first
-	lastIndex := len(posArr) - 1
-	largestGap := (posArr[0] + NUM_RING_POSITIONS) - posArr[lastIndex]
-	largestGapLowerIndex := lastIndex
+
+	largestGap := 0
+	largestGapLowerIndex := -1
 	// find largest gap in the rest of the ring
 	for i := 0; i < len(posArr)-1; i++ {
 		gap := posArr[i+1] - posArr[i]
@@ -84,6 +83,12 @@ func (n *Node) GetNewPosition() int {
 			largestGap = gap
 			largestGapLowerIndex = i
 		}
+	}
+	// handle finding gap in loop back from largest to smallest index
+	lastGap := (posArr[0] + NUM_RING_POSITIONS) - posArr[len(posArr)-1]
+	if lastGap > largestGap {
+		largestGap = lastGap
+		largestGapLowerIndex = len(posArr) - 1
 	}
 	log.Printf("Largest gap is between position %d and %d\n", posArr[largestGapLowerIndex], posArr[(largestGapLowerIndex+1)%len(posArr)])
 	if largestGap == 1 {

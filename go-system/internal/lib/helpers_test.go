@@ -45,7 +45,7 @@ func TestGetNewPositionOdd(t *testing.T) {
 	}
 	n := Node{Id: 4, Ip: fmt.Sprintf("%s:%d", BASE_URL, 8004), Port: 8004, NodeMap: testNodeMap}
 	got := n.GetNewPosition()
-	want := 87
+	want := 37
 
 	if got != want {
 		t.Errorf("Expected %d, got %d", want, got)
