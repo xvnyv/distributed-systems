@@ -71,10 +71,24 @@ type JoinOfferObject struct {
 	NodeMap  NodeMap
 }
 
+type MigrateResp struct {
+	//standard API response
+	Status STATUS_TYPE
+	Data   []BadgerObject //json
+	Error  string
+}
+
 type ChannelResp struct {
 	From    int // node ID
 	APIResp APIResp
 }
+
+type KeysetAction int
+
+const (
+	MIGRATE KeysetAction = iota
+	DELETE
+)
 
 type RequestType int
 

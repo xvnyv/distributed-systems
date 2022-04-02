@@ -11,7 +11,7 @@ const (
 	LOAD_BALANCER_PORT int    = 8080
 )
 
-var TEMP_NODE_MAP NodeMap = NodeMap{
+var TEST_NODE_MAP NodeMap = NodeMap{
 	0: NodeData{
 		Id:       0,
 		Ip:       fmt.Sprintf("%s:%d", BASE_URL, 8000),

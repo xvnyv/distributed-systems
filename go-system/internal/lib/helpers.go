@@ -23,14 +23,18 @@ func HashMD5(s string) int {
 	return int(ringPosBigInt.Mod(hashedBigInt, maxRingPosBigInt).Uint64())
 }
 
-func (n *Node) GetResponsibleNodes(keyPos int) [REPLICATION_FACTOR]NodeData {
+func sortPositions(nodeMap NodeMap) []int {
 	posArr := []int{}
-
-	for pos := range n.NodeMap {
+	for pos, _ := range nodeMap {
 		posArr = append(posArr, pos)
 	}
-
 	sort.Ints(posArr)
+	return posArr
+}
+
+func (n *Node) GetResponsibleNodes(keyPos int) [REPLICATION_FACTOR]NodeData {
+	posArr := sortPositions(n.NodeMap)
+
 	log.Printf("Key position: %d\n", keyPos)
 	firstNodePosIndex := -1
 	for i, pos := range posArr {
@@ -52,27 +56,23 @@ func (n *Node) GetResponsibleNodes(keyPos int) [REPLICATION_FACTOR]NodeData {
 	return responsibleNodes
 }
 
+/*
+	Largest gap between all node positions will be found and the middle position of this largest gap will be returned.
+	Returns position for new node, -1 if ring is full and new node cannot join
+
+	Middle position will be calculated as:
+	- If odd number of positions, middle position is taken (eg. {0,1,2} will mean 1 is chosen)
+	- If even number of positions, lower middle position is taken (eg. {0,1,2,3} will mean 1 is chosen)
+
+	When calculating the new position, the indexes that we use to find the gap are excluded from the available spots.
+	Eg. to find which position should be selected from {3,4,5,6}, we take (7-2)/2+2=4 (2 and 7 are excluded from available spots)
+*/
 func (n *Node) GetNewPosition() int {
-	/*
-		Largest gap between all node positions will be found and the middle position of this largest gap will be returned.
-		Returns position for new node, -1 if ring is full and new node cannot join
-
-		Middle position will be calculated as:
-		- If odd number of positions, middle position is taken (eg. {0,1,2} will mean 1 is chosen)
-		- If even number of positions, lower middle position is taken (eg. {0,1,2,3} will mean 1 is chosen)
-
-		When calculating the new position, the indexes that we use to find the gap are excluded from the available spots.
-		Eg. to find which position should be selected from {3,4,5,6}, we take (7-2)/2+2=4 (2 and 7 are excluded from available spots)
-	*/
-	posArr := []int{}
-	for pos, _ := range n.NodeMap {
-		posArr = append(posArr, pos)
-	}
+	posArr := sortPositions(n.NodeMap)
 	if len(posArr) == 1 {
 		// only one node in the system -- used total ring positions to calculate new position
 		return (NUM_RING_POSITIONS-posArr[0])/2 + posArr[0]
 	}
-	sort.Ints(posArr)
 	// handle finding gap in loop back from largest to smallest index first
 	lastIndex := len(posArr) - 1
 	largestGap := (posArr[0] + NUM_RING_POSITIONS) - posArr[lastIndex]
@@ -91,6 +91,71 @@ func (n *Node) GetNewPosition() int {
 		return -1
 	}
 	return (largestGap/2 + posArr[largestGapLowerIndex]) % NUM_RING_POSITIONS
+}
+
+func (n *Node) CalculateKeyset(action KeysetAction) (int, int) {
+	posArr := sortPositions(n.NodeMap)
+
+	var nodeIndex int
+	for i, pos := range posArr {
+		if pos == n.Position {
+			nodeIndex = i
+			break
+		}
+	}
+	startIndex := (nodeIndex + len(posArr) - REPLICATION_FACTOR - 1) % len(posArr)
+
+	var endIndex int
+	switch action {
+	case MIGRATE:
+		endIndex = (nodeIndex + len(posArr) - 1) % len(posArr)
+	case DELETE:
+		endIndex = (startIndex + 1) % len(posArr)
+	}
+
+	// exclusive start, inclusive end
+	return posArr[startIndex], posArr[endIndex]
+}
+
+/* Returns true if this node is the successor of the new node */
+func (n *Node) ShouldMigrateData(newPos int) bool {
+	posArr := sortPositions(n.NodeMap)
+
+	for i, pos := range posArr {
+		if pos == newPos {
+			return posArr[(i+1)%len(posArr)] == n.Position
+		}
+	}
+	// should never reach this return bcos newPos should be in posArr
+	return false
+}
+
+/* Returns true if this node is one of the 3 subsequent successors of the new node */
+func (n *Node) ShouldDeleteData(newPos int) bool {
+	posArr := sortPositions(n.NodeMap)
+
+	var newPosIndex int
+	for i, pos := range posArr {
+		if pos == newPos {
+			newPosIndex = i
+			break
+		}
+	}
+	for i := 1; i <= REPLICATION_FACTOR; i++ {
+		if posArr[(newPosIndex+i)%len(posArr)] == n.Position {
+			return true
+		}
+	}
+	return false
+}
+
+/* Returns true if position of key falls within the given range (start, end] */
+func KeyInRange(key string, start int, end int) bool {
+	pos := HashMD5(key)
+	// exclude start, include end
+	loopbackDelete := start > end && (pos > start || pos <= end)
+	regularDelete := start < end && (pos > start && pos <= end)
+	return loopbackDelete || regularDelete
 }
 
 func DetermineSuccess(requestType RequestType, respChannel <-chan ChannelResp, coordMutex *sync.Mutex) (bool, map[int]APIResp) {

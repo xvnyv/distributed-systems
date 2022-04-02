@@ -157,3 +157,28 @@ func (n *Node) BadgerGetKeys() ([]string, error) {
 	})
 	return result, err
 }
+
+func (n *Node) BadgerMigrateWrite(data []BadgerObject) error {
+	opts := badger.DefaultOptions(fmt.Sprintf("tmp/%v/badger", n.Id))
+	opts.Logger = nil
+
+	db, err := badger.Open(opts)
+	if err != nil {
+		log.Printf("Badger Error: %v\n", err)
+		return err
+	}
+	defer db.Close()
+
+	err = db.Update(func(txn *badger.Txn) error {
+		for _, item := range data {
+			//need convert DataObject to byte array
+			dataObjectBytes, _ := json.Marshal(item)
+			err := txn.Set([]byte(item.UserID), dataObjectBytes)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	return err
+}

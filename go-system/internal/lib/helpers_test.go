@@ -114,6 +114,128 @@ func TestGetNewPositionFull(t *testing.T) {
 	}
 }
 
+func TestShouldMigrateData(t *testing.T) {
+	// testing true
+	n := Node{Id: 2, Ip: fmt.Sprintf("%s:%d", BASE_URL, 8002), Port: 8002, Position: 25, NodeMap: TEST_NODE_MAP}
+	got := n.ShouldMigrateData(12)
+	want := true
+
+	if got != want {
+		t.Errorf("Expected %v, got %v", want, got)
+	}
+
+	// testing false
+	n = Node{Id: 2, Ip: fmt.Sprintf("%s:%d", BASE_URL, 8002), Port: 8002, Position: 25, NodeMap: TEST_NODE_MAP}
+	got = n.ShouldMigrateData(50)
+	want = false
+
+	if got != want {
+		t.Errorf("Expected %v, got %v", want, got)
+	}
+
+	// testing loopback
+	n = Node{Id: 0, Ip: fmt.Sprintf("%s:%d", BASE_URL, 8000), Port: 8000, Position: 0, NodeMap: TEST_NODE_MAP}
+	got = n.ShouldMigrateData(75)
+	want = true
+
+	if got != want {
+		t.Errorf("Expected %v, got %v", want, got)
+	}
+}
+
+func TestShouldDeleteData(t *testing.T) {
+	// testing first delete node
+	n := Node{Id: 2, Ip: fmt.Sprintf("%s:%d", BASE_URL, 8002), Port: 8002, Position: 25, NodeMap: TEST_NODE_MAP}
+	got := n.ShouldDeleteData(12)
+	want := true
+
+	if got != want {
+		t.Errorf("Expected %v, got %v", want, got)
+	}
+
+	// testing last delete node + loopback
+	n = Node{Id: 0, Ip: fmt.Sprintf("%s:%d", BASE_URL, 8000), Port: 8000, Position: 0, NodeMap: TEST_NODE_MAP}
+	got = n.ShouldDeleteData(25)
+	want = true
+
+	if got != want {
+		t.Errorf("Expected %v, got %v", want, got)
+	}
+
+	// testing false
+	n = Node{Id: 4, Ip: fmt.Sprintf("%s:%d", BASE_URL, 8004), Port: 8004, Position: 12, NodeMap: TEST_NODE_MAP}
+	got = n.ShouldDeleteData(25)
+	want = false
+
+	if got != want {
+		t.Errorf("Expected %v, got %v", want, got)
+	}
+}
+
+func TestCalculateDeleteKeyset(t *testing.T) {
+	// with loopback
+	n := Node{Id: 1, Ip: fmt.Sprintf("%s:%d", BASE_URL, 8001), Port: 8001, Position: 50, NodeMap: TEST_NODE_MAP}
+	gotStart, gotEnd := n.CalculateKeyset(DELETE)
+	wantStart := 75
+	wantEnd := 0
+
+	if gotStart != wantStart {
+		t.Errorf("Expected %d, got %d", wantStart, gotStart)
+	}
+
+	if gotEnd != wantEnd {
+		t.Errorf("Expected %d, got %d", wantEnd, gotEnd)
+	}
+
+	// without loopback
+	n = Node{Id: 3, Ip: fmt.Sprintf("%s:%d", BASE_URL, 8003), Port: 8003, Position: 75, NodeMap: TEST_NODE_MAP}
+	gotStart, gotEnd = n.CalculateKeyset(DELETE)
+	wantStart = 0
+	wantEnd = 12
+
+	if gotStart != wantStart {
+		t.Errorf("Expected %d, got %d", wantStart, gotStart)
+	}
+
+	if gotEnd != wantEnd {
+		t.Errorf("Expected %d, got %d", wantEnd, gotEnd)
+	}
+}
+
+func TestKeyInRange(t *testing.T) {
+	// testing in range normal
+	got := KeyInRange("123", 0, 12) // keyPos = 8
+	want := true
+
+	if got != want {
+		t.Errorf("Expected %v, got %v", want, got)
+	}
+
+	// testing in range loopback
+	got = KeyInRange("132", 75, 0) // keyPos = 88
+	want = true
+
+	if got != want {
+		t.Errorf("Expected %v, got %v", want, got)
+	}
+
+	// testing not in range loopback
+	got = KeyInRange("132", 0, 12)
+	want = false
+
+	if got != want {
+		t.Errorf("Expected %v, got %v", want, got)
+	}
+
+	// testing not in range normal
+	got = KeyInRange("123", 75, 0)
+	want = false
+
+	if got != want {
+		t.Errorf("Expected %v, got %v", want, got)
+	}
+}
+
 func TestDataObjectIsEqual(t *testing.T) {
 	var testData ClientCart = ClientCart{
 		UserID: "hello",
