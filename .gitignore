@@ -15,6 +15,7 @@
 # vendor/
 
 .DS_Store
+.vscode/
 
 # badger internal storage folders
 go-system/cmd/tmp/
