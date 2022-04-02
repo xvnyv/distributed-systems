@@ -32,6 +32,7 @@ func main() {
 	go node.HandleRequests()
 
 	// Update nginx here
+	node.UpdateNginx()
 
 	fmt.Println("Press Enter to end")
 	fmt.Scanln()
