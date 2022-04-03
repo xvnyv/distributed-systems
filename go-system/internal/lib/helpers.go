@@ -7,11 +7,19 @@ import (
 	"reflect"
 	"sort"
 	"sync"
+
+	"github.com/fatih/color"
 )
 
 /*
 Contains helper functions for APIs
 */
+
+func ColorLog(s string, chosenColor color.Attribute) {
+	color.Set(chosenColor)
+	log.Println(s)
+	color.Unset()
+}
 
 func HashMD5(s string) int {
 	hasher := md5.New()

@@ -31,7 +31,6 @@ func main() {
 	log.Printf("Node %d started\n", node.Id)
 	go node.HandleRequests()
 
-	// Update nginx here
 	node.UpdateNginx()
 
 	fmt.Println("Press Enter to end")

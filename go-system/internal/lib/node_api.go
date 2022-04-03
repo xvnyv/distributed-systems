@@ -6,14 +6,17 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+
+	"github.com/fatih/color"
 )
 
 func (n *Node) FulfilWriteRequest(w http.ResponseWriter, r *http.Request) {
+	ColorLog("INTERNAL ENDPOINT /write HIT", color.FgYellow)
 	var c ClientCart
 	body, _ := ioutil.ReadAll(r.Body)
 	json.Unmarshal(body, &c)
 
-	log.Println("Write request received: ", c)
+	log.Println("Write request received with key: ", c.UserID)
 
 	n.BadgerLock.Lock()
 	badgerObject, err := n.BadgerWrite(c)
@@ -52,6 +55,7 @@ func (n *Node) FulfilWriteRequest(w http.ResponseWriter, r *http.Request) {
 }
 
 func (n *Node) FulfilReadRequest(w http.ResponseWriter, r *http.Request) {
+	ColorLog("INTERNAL ENDPOINT /read HIT", color.FgYellow)
 	query := r.URL.Query()
 
 	userId := query.Get("id") //! type string
@@ -95,6 +99,7 @@ func (n *Node) FulfilReadRequest(w http.ResponseWriter, r *http.Request) {
 }
 
 func (n *Node) SimulateFailRequest(w http.ResponseWriter, r *http.Request) {
+	ColorLog("INTERNAL ENDPOINT /simulate-fail HIT", color.FgYellow)
 	query := r.URL.Query()
 
 	count, err := strconv.Atoi(query.Get("count")) //! type string
@@ -107,6 +112,7 @@ func (n *Node) SimulateFailRequest(w http.ResponseWriter, r *http.Request) {
 
 /* Calculate new node position and send position to new node */
 func (n *Node) handleJoinRequest(w http.ResponseWriter, r *http.Request) {
+	ColorLog("ENDPOINT /join-request HIT", color.FgMagenta)
 	// calculate new node position
 	newPos := n.GetNewPosition()
 
@@ -149,7 +155,7 @@ func (n *Node) handleJoinBroadcast(w http.ResponseWriter, r *http.Request) {
 		Node 1 can also delete the keys at (75,0] and
 		node 4 can delete the keys at (0-12].
 	*/
-	log.Println("Endpoint /join-broadcast hit")
+	ColorLog("ENDPOINT /join-broadcast HIT", color.FgMagenta)
 	var newNode NodeData
 	body, _ := ioutil.ReadAll(r.Body)
 	json.Unmarshal(body, &newNode)
