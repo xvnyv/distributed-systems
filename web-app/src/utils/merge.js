@@ -37,11 +37,27 @@ const mergeClientCarts = (clientCartSelf, clientCartReceived) => {
 
   output.Item = newmap;
 
-  var newVectorClock = [];
-  for (var i = 0; i < clientCartSelf.VectorClock.length; i++) {
-    newVectorClock.push(
-      Max(clientCartSelf.VectorClock[i], clientCartReceived.VectorClock[i])
+  var newVectorClock = {};
+  var selfVectorClockKeys = Object.keys(clientCartSelf.VectorClock);
+  for (var i = 0; i < selfVectorClockKeys.length; i++) {
+    Max(clientCartSelf.VectorClock[i], clientCartReceived.VectorClock[i]);
+  }
+
+  for (var key in clientCartSelf.VectorClock) {
+    if (clientCartReceived.VectorClock[key] === undefined) {
+      newVectorClock[key] = clientCartSelf.VectorClock[key];
+      continue;
+    }
+    newVectorClock[key] = Max(
+      clientCartSelf.VectorClock[key],
+      clientCartReceived.VectorClock[key]
     );
+  }
+
+  for (var key in clientCartReceived.VectorClock) {
+    if (newVectorClock[key] === undefined) {
+      newVectorClock[key] = clientCartReceived.VectorClock[key];
+    }
   }
 
   output.VectorClock = newVectorClock;

@@ -55,7 +55,7 @@ export const SendPostRequest = async (item, toast, toastIdRef, dispatch) => {
         status: "success",
         description:
           "User's cart updated with vector clock :" +
-          data.Data.Versions[0].VectorClock,
+          JSON.stringify(data.Data.Versions[0].VectorClock),
         duration: 2000,
         isClosable: true,
         position: "bottom-left",

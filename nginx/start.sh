@@ -1,3 +1,3 @@
 #!/bin/bash
-
-nginx -c $PWD/nginx.conf
+nginx -s stop
+nginx -c "$PWD"/nginx.conf

@@ -2,7 +2,10 @@ module github.com/distributed-systems/go-system
 
 go 1.17
 
-require github.com/dgraph-io/badger/v3 v3.2103.2
+require (
+	github.com/dgraph-io/badger/v3 v3.2103.2
+	github.com/fatih/color v1.13.0
+)
 
 require (
 	github.com/cespare/xxhash v1.1.0 // indirect
@@ -16,9 +19,11 @@ require (
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/flatbuffers v2.0.6+incompatible // indirect
 	github.com/klauspost/compress v1.15.1 // indirect
+	github.com/mattn/go-colorable v0.1.12 // indirect
+	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	go.opencensus.io v0.23.0 // indirect
-	golang.org/x/net v0.0.0-20220225172249-27dd8689420f // indirect
-	golang.org/x/sys v0.0.0-20220317022123-2c4bbad7e934 // indirect
-	google.golang.org/protobuf v1.27.1 // indirect
+	golang.org/x/net v0.0.0-20220401154927-543a649e0bdd // indirect
+	golang.org/x/sys v0.0.0-20220403020550-483a9cbc67c0 // indirect
+	google.golang.org/protobuf v1.28.0 // indirect
 )

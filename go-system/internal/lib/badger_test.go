@@ -35,7 +35,7 @@ var testData ClientCart = ClientCart{
 		Name:     "shift",
 		Quantity: 1,
 	}},
-	VectorClock: []int{1, 0, 234, 347, 2, 34, 6, 6, 235, 7},
+	VectorClock: map[int]int{0: 1, 1: 0, 2: 234, 3: 347, 4: 2, 5: 34, 6: 6, 7: 6, 8: 235, 9: 7},
 }
 
 var keylst []string = make([]string, 0)
@@ -76,7 +76,7 @@ func TestBadgerGetKeys(t *testing.T) {
 				Name:     "shift",
 				Quantity: 1,
 			}},
-			VectorClock: []int{i, i, i, i, i, i, i, i},
+			VectorClock: map[int]int{0: i, 1: i, 2: i, 3: i, 4: i, 5: i, 6: i, 7: i},
 		}
 		keylst = append(keylst, tempObject.UserID)
 		_, err := testNode.BadgerWrite(tempObject)
@@ -104,7 +104,7 @@ func TestOverwriteConflictClientCarts(t *testing.T) {
 	type testItem struct {
 		c1       ClientCart
 		c2       ClientCart
-		expected ClientCart
+		expected BadgerObject
 	}
 	testItems := make([]testItem, 3)
 	testItems[0] = testItem{
@@ -118,7 +118,7 @@ func TestOverwriteConflictClientCarts(t *testing.T) {
 					Quantity: 123,
 				},
 			},
-			VectorClock: []int{1, 2, 3, 4, 5}, //smaller vector clock
+			VectorClock: map[int]int{1: 1, 2: 2, 3: 3, 4: 4, 5: 5}, //smaller vector clock
 		}, c2: ClientCart{
 			UserID: "8",
 			Item: map[int]ItemObject{
@@ -128,18 +128,25 @@ func TestOverwriteConflictClientCarts(t *testing.T) {
 					Quantity: 123,
 				},
 			},
-			VectorClock: []int{1, 2, 3, 7, 5}, //strictly larger vector clock
-		}, expected: ClientCart{
+			VectorClock: map[int]int{1: 1, 2: 2, 3: 3, 4: 7, 5: 5}, //strictly larger vector clock
+		}, expected: BadgerObject{
 			UserID: "8",
-			Item: map[int]ItemObject{
-				15: {
-					Id:       15,
-					Name:     "Orange",
-					Quantity: 123,
+			Versions: []ClientCart{
+				ClientCart{
+					UserID: "8",
+					Item: map[int]ItemObject{
+						15: {
+							Id:       15,
+							Name:     "Orange",
+							Quantity: 123,
+						},
+					},
+					VectorClock: map[int]int{1: 1, 2: 2, 3: 3, 4: 7, 5: 5}, //test whether vector clock overwritten by strictly larger
 				},
 			},
-			VectorClock: []int{1, 2, 3, 7, 5}, //test whether vector clock overwritten by strictly larger
-		}}
+		},
+	}
+
 	testItems[1] = testItem{
 		//test whether quantity that is larger is taken
 		// c1.orange.qty = 12123 vs c2.orange.qty = 123 => c1.orange.qty
@@ -158,8 +165,9 @@ func TestOverwriteConflictClientCarts(t *testing.T) {
 					Quantity: 123, //smaller
 				},
 			},
-			VectorClock: []int{1, 2, 3, 6, 5},
-		}, c2: ClientCart{
+			VectorClock: map[int]int{1: 1, 2: 2, 3: 3, 4: 6, 5: 5},
+		},
+		c2: ClientCart{
 			UserID: "9",
 			Item: map[int]ItemObject{
 				12: {
@@ -173,23 +181,31 @@ func TestOverwriteConflictClientCarts(t *testing.T) {
 					Quantity: 123, //smaller
 				},
 			},
-			VectorClock: []int{1, 2, 3, 4, 5},
-		}, expected: ClientCart{
+			VectorClock: map[int]int{1: 1, 2: 2, 3: 3, 4: 4, 5: 5},
+		},
+		expected: BadgerObject{
 			UserID: "9",
-			Item: map[int]ItemObject{
-				15: {
-					Id:       15,
-					Name:     "Orange",
-					Quantity: 12123, //larger
-				},
-				12: {
-					Id:       12,
-					Name:     "Pencil",
-					Quantity: 123, //smaller
+			Versions: []ClientCart{
+				ClientCart{
+					UserID: "9",
+					Item: map[int]ItemObject{
+						12: {
+							Id:       12,
+							Name:     "Pencil",
+							Quantity: 123, //larger
+						},
+						15: {
+							Id:       15,
+							Name:     "Orange",
+							Quantity: 12123, //smaller
+						},
+					},
+					VectorClock: map[int]int{1: 1, 2: 2, 3: 3, 4: 6, 5: 5},
 				},
 			},
-			VectorClock: []int{1, 2, 3, 6, 5},
-		}}
+		},
+	}
+
 	testItems[2] = testItem{
 		c1: ClientCart{ // test delete
 			UserID: "75",
@@ -210,8 +226,9 @@ func TestOverwriteConflictClientCarts(t *testing.T) {
 					Quantity: 1290,
 				},
 			},
-			VectorClock: []int{10, 2, 3, 4, 5},
-		}, c2: ClientCart{
+			VectorClock: map[int]int{1: 10, 2: 2, 3: 3, 4: 4, 5: 5},
+		},
+		c2: ClientCart{
 			UserID: "75",
 			Item: map[int]ItemObject{
 				13: {
@@ -225,23 +242,51 @@ func TestOverwriteConflictClientCarts(t *testing.T) {
 					Quantity: 1290, //smaller
 				},
 			},
-			VectorClock: []int{10, 2, 3, 4, 6},
-		}, expected: ClientCart{
+			VectorClock: map[int]int{1: 9, 2: 2, 3: 3, 4: 4, 5: 6},
+		},
+		expected: BadgerObject{
 			UserID: "75",
-			Item: map[int]ItemObject{
-				13: {
-					Id:       13,
-					Name:     "Pen",
-					Quantity: 12003, //larger
+			Versions: []ClientCart{
+				ClientCart{ // test delete
+					UserID: "75",
+					Item: map[int]ItemObject{
+						13: {
+							Id:       13,
+							Name:     "Pen",
+							Quantity: 12003, //larger
+						},
+						15: {
+							Id:       15,
+							Name:     "Ruler",
+							Quantity: 1290, //smaller
+						},
+						14: {
+							Id:       14,
+							Name:     "scissors", //missing in c1
+							Quantity: 1290,
+						},
+					},
+					VectorClock: map[int]int{1: 10, 2: 2, 3: 3, 4: 4, 5: 5},
 				},
-				15: {
-					Id:       15,
-					Name:     "Ruler",
-					Quantity: 1290, //smaller
+				ClientCart{
+					UserID: "75",
+					Item: map[int]ItemObject{
+						13: {
+							Id:       13,
+							Name:     "Pen",
+							Quantity: 12003, //larger
+						},
+						15: {
+							Id:       15,
+							Name:     "Ruler",
+							Quantity: 1290, //smaller
+						},
+					},
+					VectorClock: map[int]int{1: 9, 2: 2, 3: 3, 4: 4, 5: 6},
 				},
 			},
-			VectorClock: []int{10, 2, 3, 4, 6},
-		}}
+		},
+	}
 
 	for i := 0; i < len(testItems); i++ {
 		_, err := testNode.BadgerWrite(testItems[i].c1)
@@ -257,7 +302,7 @@ func TestOverwriteConflictClientCarts(t *testing.T) {
 			t.Errorf("Reading error: %v", err.Error())
 		}
 
-		clientCartsEq := ClientCartEqual(res.Versions[0], testItems[i].expected)
+		clientCartsEq := reflect.DeepEqual(res, testItems[i].expected)
 
 		if !clientCartsEq {
 			t.Errorf("test Number %v", i)

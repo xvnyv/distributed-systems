@@ -31,13 +31,20 @@ func (n *Node) BadgerWrite(c ClientCart) (BadgerObject, error) {
 	} else {
 		//iterate through the versions, check whether can overwrite
 		newVersions := []ClientCart{}
+		add := true
 		for i := 0; i < len(lastWritten.Versions); i++ {
 			if VectorClockSmaller(lastWritten.Versions[i].VectorClock, c.VectorClock) {
+				// don't add to new versions if incoming can override
 				continue
+			}
+			if VectorClockSmaller(c.VectorClock, lastWritten.Versions[i].VectorClock) {
+				add = false
 			}
 			newVersions = append(newVersions, lastWritten.Versions[i])
 		}
-		newVersions = append(newVersions, c)
+		if add {
+			newVersions = append(newVersions, c)
+		}
 
 		lastWritten.Versions = newVersions
 		toWrite = lastWritten
@@ -156,4 +163,29 @@ func (n *Node) BadgerGetKeys() ([]string, error) {
 		return nil
 	})
 	return result, err
+}
+
+func (n *Node) BadgerMigrateWrite(data []BadgerObject) error {
+	opts := badger.DefaultOptions(fmt.Sprintf("tmp/%v/badger", n.Id))
+	opts.Logger = nil
+
+	db, err := badger.Open(opts)
+	if err != nil {
+		log.Printf("Badger Error: %v\n", err)
+		return err
+	}
+	defer db.Close()
+
+	err = db.Update(func(txn *badger.Txn) error {
+		for _, item := range data {
+			//need convert DataObject to byte array
+			dataObjectBytes, _ := json.Marshal(item)
+			err := txn.Set([]byte(item.UserID), dataObjectBytes)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	return err
 }

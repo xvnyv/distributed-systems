@@ -11,14 +11,9 @@ import (
 	"net/url"
 	"sync"
 	"time"
+
+	"github.com/fatih/color"
 )
-
-/* Write would need: ItemID, ItemName, ItemQuantity and UserID.
-
-Read will obtain information from UserID.
-*/
-
-// ========== START COORDINATOR WRITE ==========
 
 /* Send individual internal write request to each node */
 func (n *Node) sendWriteRequest(c ClientCart, node NodeData, respChannel chan<- ChannelResp) {
@@ -85,7 +80,7 @@ func (n *Node) hintedWriteRequest(c ClientCart, node NodeData) {
 
 /* Message handler for write requests for external API to client application */
 func (n *Node) handleWriteRequest(w http.ResponseWriter, r *http.Request) {
-	log.Printf("Coordinator Node:%v WRITE REQUEST FROM CLIENT RECEIVED \n", n.Id)
+	ColorLog(fmt.Sprintf("Coordinator Node:%v WRITE REQUEST FROM CLIENT RECEIVED", n.Id), color.FgCyan)
 
 	// ? FEATURE: if node fails, it can still coordinate so that hinted handoff will be executed.
 	// ? If we allow coordinator to fail, the write request gets dropped without any backup
@@ -113,9 +108,9 @@ func (n *Node) handleWriteRequest(w http.ResponseWriter, r *http.Request) {
 	// If vector clock is provided, check the nodes to ensure that the provided version exists,
 	// then update all replicas to the same cart and vector clock versions to ensure eventual consistency
 	if c.VectorClock == nil {
-		c.VectorClock = []int{}
+		c.VectorClock = make(map[int]int, 0)
 		for i := 0; i < len(n.NodeMap); i++ {
-			c.VectorClock = append(c.VectorClock, 0)
+			c.VectorClock[i] = 0
 		}
 	}
 
@@ -146,10 +141,6 @@ func (n *Node) handleWriteRequest(w http.ResponseWriter, r *http.Request) {
 	}
 	coordMutex.Unlock()
 }
-
-// ========== END COORDINATOR WRITE ==========
-
-// ========== START COORDINATOR READ ==========
 
 /* Send individual internal read request to each node */
 func (n *Node) sendReadRequest(key string, node NodeData, respChannel chan<- ChannelResp) {
@@ -189,7 +180,7 @@ func (n *Node) sendReadRequests(key string, nodes [REPLICATION_FACTOR]NodeData, 
 
 /* Message handler for read requests for external API to client application */
 func (n *Node) handleReadRequest(w http.ResponseWriter, r *http.Request) {
-	log.Printf("Coordinator Node:%v READ REQUEST FROM CLIENT RECEIVED \n", n.Id)
+	ColorLog(fmt.Sprintf("Coordinator Node:%v READ REQUEST FROM CLIENT RECEIVED", n.Id), color.FgCyan)
 	query := r.URL.Query()
 	userId := query.Get("id")
 
@@ -223,27 +214,4 @@ func (n *Node) handleReadRequest(w http.ResponseWriter, r *http.Request) {
 	}
 	coordMutex.Unlock()
 
-}
-
-// ========== END COORDINATOR READ ==========
-
-func (n *Node) HandleRequests() {
-	// Internal API
-	http.HandleFunc("/read", n.FulfilReadRequest)
-	http.HandleFunc("/write", n.FulfilWriteRequest)
-	http.HandleFunc("/simulate-fail", n.SimulateFailRequest)
-	// http.HandleFunc("/write-success", handleMessage2)
-	// http.HandleFunc("/read-success", handleMessage2)
-	// http.HandleFunc("/join-request", handleMessage2)
-	// http.HandleFunc("/join-broadcast", handleMessage2)
-	// http.HandleFunc("/join-offer", handleMessage2)
-	// http.HandleFunc("/data-migration", handleMessage2)
-	// http.HandleFunc("/handover-request", handleMessage2)
-	// http.HandleFunc("/handover-success", handleMessage2)
-
-	// External API
-	http.HandleFunc("/write-request", n.handleWriteRequest)
-	http.HandleFunc("/read-request", n.handleReadRequest)
-
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", n.Port), nil))
 }
