@@ -21,3 +21,6 @@
 go-system/cmd/tmp/
 go-system/internal/lib/tmp/
 go-system/tmp/
+
+# always changing nginx
+nginx/

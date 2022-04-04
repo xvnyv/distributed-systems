@@ -4,31 +4,60 @@ import { v4 as uuidv4 } from "uuid";
 import { CLIENTCART_ACTIONS } from "../reducers/ClientCartReducer";
 import { mergeVersions } from "../utils/merge";
 
-export const SendGetRequest = async (userId, dispatch) => {
-  const res = await fetch(`http://localhost:8080/read-request?id=${userId}`, {
+export const SendGetRequest = async (userId, dispatch, toast, toastIdRef) => {
+  console.log("error: ");
+  await fetch(`http://localhost:8080/read-request?id=${userId}`, {
     method: "GET",
     headers: {
       "Content-type": "application/json",
     },
   })
     .then((response) => {
-      response.json().then((data) => {
-        console.log("Success:", data.Data);
-        if (data.Data.UserID === "") {
+      if (response.status >= 500) {
+        toastIdRef.current = toast({
+          title: "Error",
+          status: "error",
+          description: "Get Request Error :" + response.statusText,
+          duration: 2000,
+          isClosable: true,
+          position: "top-right",
+        });
+        return;
+      }
+      response
+        .json()
+        .then((data) => {
+          console.log("Success:", data);
+          if (data.Data.UserID === "") {
+            dispatch({
+              type: CLIENTCART_ACTIONS.CHANGE_USER,
+              payload: { UserID: userId, Item: {} },
+            });
+          } else {
+            dispatch({
+              type: CLIENTCART_ACTIONS.CHANGE_USER,
+              payload: mergeVersions(data.Data),
+            });
+          }
+        })
+        .catch((err) => {
+          console.log("ERROR: ", err);
+          toastIdRef.current = toast({
+            title: "Error",
+            status: "error",
+            description: "Get Request Error :" + err,
+            duration: 2000,
+            isClosable: true,
+            position: "top-right",
+          });
           dispatch({
             type: CLIENTCART_ACTIONS.CHANGE_USER,
             payload: { UserID: userId, Item: {} },
           });
-        } else {
-          dispatch({
-            type: CLIENTCART_ACTIONS.CHANGE_USER,
-            payload: mergeVersions(data.Data),
-          });
-        }
-      });
+        });
     })
     .catch((err) => {
-      console.log(err);
+      console.log("ERROR: ", err);
       dispatch({
         type: CLIENTCART_ACTIONS.CHANGE_USER,
         payload: { UserID: userId, Item: {} },

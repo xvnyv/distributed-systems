@@ -47,7 +47,7 @@ function App() {
   const CheckEnter = (e) => {
     // setUserId(e.target.value);
     if (e.key === "Enter") {
-      SendGetRequest(e.target.value, clientCartDispatch);
+      SendGetRequest(e.target.value, clientCartDispatch, toast, toastIdRef);
       return;
     }
     if (isNaN(e.key)) {
@@ -88,7 +88,7 @@ function App() {
               border="1px"
               borderColor="pink.100"
               onClick={() => {
-                SendGetRequest(userId, clientCartDispatch);
+                SendGetRequest(userId, clientCartDispatch, toast, toastIdRef);
               }}
             >
               Find User
