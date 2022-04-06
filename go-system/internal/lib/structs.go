@@ -1,5 +1,7 @@
 package lib
 
+import "sync"
+
 type MessageType int
 
 type NodeData struct {
@@ -19,6 +21,8 @@ type Node struct {
 	NodeMap      NodeMap
 	Successors   []int
 	Predecessors []int
+	BadgerLock   *sync.Mutex
+	FailCount    int
 }
 
 type Message struct {
@@ -35,7 +39,12 @@ type Message struct {
 type ClientCart struct {
 	UserID      string
 	Item        map[int]ItemObject
-	VectorClock []int
+	VectorClock map[int]int // {coordinatorId: verstion_number}
+}
+
+type BadgerObject struct {
+	UserID   string
+	Versions []ClientCart
 }
 
 type ItemObject struct {
@@ -47,7 +56,25 @@ type ItemObject struct {
 type APIResp struct {
 	//standard API response
 	Status STATUS_TYPE
-	Data   ClientCart //json
+	Data   BadgerObject //json
+	Error  string
+}
+
+type JoinResp struct {
+	Status STATUS_TYPE
+	Data   JoinOfferObject //json
+	Error  string
+}
+
+type JoinOfferObject struct {
+	Position int
+	NodeMap  NodeMap
+}
+
+type MigrateResp struct {
+	//standard API response
+	Status STATUS_TYPE
+	Data   []BadgerObject //json
 	Error  string
 }
 
@@ -55,6 +82,13 @@ type ChannelResp struct {
 	From    int // node ID
 	APIResp APIResp
 }
+
+type KeysetAction int
+
+const (
+	MIGRATE KeysetAction = iota
+	DELETE
+)
 
 type RequestType int
 

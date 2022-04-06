@@ -15,10 +15,9 @@ import {
 } from "@chakra-ui/react";
 
 import React, { useState } from "react";
-import { SendPostRequest } from "../http_helpers/PostGetRequesters";
 import { CLIENTCART_ACTIONS } from "../reducers/ClientCartReducer";
 
-const CAddItemModal = ({ state, dispatch, appToast, appToastRef }) => {
+const CAddUserModal = ({ state, dispatch }) => {
   // to control state of modal
   const { isOpen, onOpen, onClose } = useDisclosure();
 
@@ -55,22 +54,10 @@ const CAddItemModal = ({ state, dispatch, appToast, appToastRef }) => {
       });
       return;
     }
-    // dispatch({
-    //   type: CLIENTCART_ACTIONS.NEW,
-    //   payload: { itemId, itemName, dispatch },
-    // });
-    var newState = {
-      ...state,
-      Item: {
-        ...state.Item,
-        [parseInt(itemId)]: {
-          Id: parseInt(itemId),
-          Name: itemName,
-          Quantity: 1,
-        },
-      },
-    };
-    SendPostRequest(newState, appToast, appToastRef, dispatch);
+    dispatch({
+      type: CLIENTCART_ACTIONS.NEW_USER,
+      payload: { itemId, itemName, toast, toastIdRef },
+    });
     onClose();
   };
 
@@ -80,68 +67,42 @@ const CAddItemModal = ({ state, dispatch, appToast, appToastRef }) => {
       addItem();
     }
   };
-  const CheckNumber = (e) => {
-    if (isNaN(e.key)) {
-      toastIdRef.current = toast({
-        title: "Input Error",
-        status: "warning",
-        description: "Item ID should be a number",
-        duration: 2000,
-        isClosable: true,
-        position: "top-left",
-      });
-    }
-  };
 
   return (
     <>
       <Button
+        marginTop={5}
         onClick={onOpen}
         width="100%"
-        colorScheme={"teal"}
+        colorScheme={"yellow"}
         variant="ghost"
         border="1px"
-        borderColor="teal.100"
+        borderColor="yellow.300"
       >
-        New Item
+        New User
       </Button>
 
       <Modal isOpen={isOpen} onClose={onClose}>
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>New Item</ModalHeader>
+          <ModalHeader>New User</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
             <FormControl>
-              <FormLabel>Item ID</FormLabel>
+              <FormLabel>User ID</FormLabel>
               <Input
                 onChange={(e) => {
                   setItemId(e.target.value);
                 }}
-                onKeyPress={(e) => {
-                  CheckNumber(e);
-                  CheckEnter(e);
-                }}
+                onKeyPress={(e) => CheckEnter(e)}
                 placeholder="e.g, 6"
                 type="number"
-              />
-            </FormControl>
-
-            <FormControl mt={4}>
-              <FormLabel>Item Name</FormLabel>
-              <Input
-                onChange={(e) => {
-                  setItemName(e.target.value);
-                }}
-                onKeyPress={(e) => CheckEnter(e)}
-                placeholder="e.g, banana"
-                onSubmit={addItem}
               />
             </FormControl>
           </ModalBody>
 
           <ModalFooter>
-            <Button colorScheme="blue" mr={3} onClick={addItem}>
+            <Button colorScheme="yellow" mr={3} onClick={addItem}>
               save
             </Button>
             <Button variant="ghost" onClick={onClose}>
@@ -154,4 +115,4 @@ const CAddItemModal = ({ state, dispatch, appToast, appToastRef }) => {
   );
 };
 
-export default CAddItemModal;
+export default CAddUserModal;

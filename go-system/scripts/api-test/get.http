@@ -2,18 +2,18 @@
 # Calculate hash
 # Send read request to responsible nodes
 ### Handle write request
-GET http://localhost:8004/read-request?id=126
+GET http://localhost:8080/read-request?id=126
 
 
 # Read item in Badger DB
 # Send items back to Handle write request
 ### Fulfill write request
-GET http://localhost:8000/read?id=126
+GET http://localhost:8080/read?id=126
 
 # Calculate hash
 # Send write request to responsible nodes
 ### Handle write request
-POST http://localhost:8000/write-request
+POST http://localhost:8080/write-request
 
 {
     "UserID": "126",
@@ -29,7 +29,7 @@ POST http://localhost:8000/write-request
         "Quantity": 6
     }
     },
-    "VectorClock": [1,0,0,0,0]
+    "VectorClock": {"0":0,"1":0,"2":0,"3":0,"4":1 }
 }
 
 # Change item in Badger DB
@@ -38,12 +38,20 @@ POST http://localhost:8000/write-request
 ### Fulfill write request
 POST http://localhost:8000/write
 
-{
-    "UserID": "123",
+{   "Coordinator": 2,
+    "ClientCart":{
+    "UserID": "99",
     "Item": {
+        "12":{
         "Id": 12,
         "Name": "pen",
-        "Quantity": 2
+        "Quantity": 10
+        }
     },
-    "VectorClock": [0, 1, 1]
+    "VectorClock": [0, 0,0,0,1]
+    },
+    "Conflict" : true
 }
+
+### Simulate fail node
+GET http://localhost:8000/simulate-fail?count=5

@@ -17,49 +17,67 @@ import {
 } from "@chakra-ui/react";
 import { AddIcon, MinusIcon } from "@chakra-ui/icons";
 //test
-import { ITEM_ACTIONS } from "../reducers/ItemReducer";
+import { CLIENTCART_ACTIONS } from "../reducers/ClientCartReducer";
 import React, { useState } from "react";
+import { SendPostRequest } from "../http_helpers/PostGetRequesters";
 
-const CTable = ({ state, dispatch }) => {
+const CTable = ({ state, dispatch, toast, toastRef }) => {
   //delete alert
   const { isOpen, onOpen, onClose } = useDisclosure();
   const cancelRef = React.useRef();
   const [toDelete, setToDelete] = useState();
-
   //return empty cart if no items
-  if (Object.keys(state.item).length === 0) {
+  if (Object.keys(state?.Item).length === 0) {
     return (
       <Table variant="simple">
-        <TableCaption>Shopping Cart for User: {state.userId} Empty</TableCaption>
+        <TableCaption>
+          Shopping Cart for User: {state.UserID} Empty
+        </TableCaption>
       </Table>
     );
   }
 
   //itemIds and attributes init
-  var itemIds = Object.keys(state.item);
-  var itemAttributes = Object.keys(state.item[itemIds[0]]);
+  var itemIds = Object.keys(state.Item);
+  var itemAttributes = Object.keys(state.Item[itemIds[0]]);
 
   //dispatching + , - , and del functions upon button press
   const itemAdd = (id) => {
-    dispatch({ type: ITEM_ACTIONS.INCREMENT, payload: id });
+    const newState = {
+      ...state,
+      Item: {
+        ...state.Item,
+        [id]: { ...state.Item[id], Quantity: state.Item[id].Quantity + 1 },
+      },
+    };
+    SendPostRequest(newState, toast, toastRef, dispatch);
   };
   const itemSubtract = (id) => {
-    if (state.item[id].Quantity === 1) {
+    if (state.Item[id].Quantity === 1) {
       setToDelete(id);
       onOpen();
       return;
     }
-    dispatch({ type: ITEM_ACTIONS.DECREMENT, payload: id });
+    const newState = {
+      ...state,
+      Item: {
+        ...state.Item,
+        [id]: { ...state.Item[id], Quantity: state.Item[id].Quantity - 1 },
+      },
+    };
+    SendPostRequest(newState, toast, toastRef, dispatch);
   };
   const itemDelete = () => {
-    dispatch({ type: ITEM_ACTIONS.DELETE, payload: toDelete });
+    delete state.Item[toDelete];
+    var newState = state;
+    SendPostRequest(newState, toast, toastRef, dispatch);
     onClose();
   };
 
   return (
     <>
       <Table variant="simple">
-        <TableCaption>Shopping Cart for User: {state.userId}</TableCaption>
+        <TableCaption>Shopping Cart for User: {state.UserID}</TableCaption>
         <Thead>
           <Tr>
             {/* mapping item attributes into the column headers */}
@@ -75,7 +93,7 @@ const CTable = ({ state, dispatch }) => {
           {itemIds.map((n) => (
             <Tr>
               {itemAttributes.map((x) => (
-                <Td>{state.item[n][x]}</Td>
+                <Td>{state.Item[n][x]}</Td>
               ))}
               <Td>
                 <Button marginRight={5} onClick={(e) => itemAdd(n)}>
@@ -91,14 +109,20 @@ const CTable = ({ state, dispatch }) => {
       </Table>
 
       {/* alert dialog for deleting item */}
-      <AlertDialog isOpen={isOpen} leastDestructiveRef={cancelRef} onClose={onClose}>
+      <AlertDialog
+        isOpen={isOpen}
+        leastDestructiveRef={cancelRef}
+        onClose={onClose}
+      >
         <AlertDialogOverlay>
           <AlertDialogContent>
             <AlertDialogHeader fontSize="lg" fontWeight="bold">
               Delete Item
             </AlertDialogHeader>
 
-            <AlertDialogBody>Are you sure? You can't undo this action afterwards.</AlertDialogBody>
+            <AlertDialogBody>
+              Are you sure? You can't undo this action afterwards.
+            </AlertDialogBody>
 
             <AlertDialogFooter>
               <Button ref={cancelRef} onClick={onClose}>

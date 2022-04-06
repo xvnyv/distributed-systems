@@ -4,13 +4,22 @@ import (
 	"crypto/md5"
 	"log"
 	"math/big"
+	"reflect"
 	"sort"
 	"sync"
+
+	"github.com/fatih/color"
 )
 
 /*
 Contains helper functions for APIs
 */
+
+func ColorLog(s string, chosenColor color.Attribute) {
+	color.Set(chosenColor)
+	log.Println(s)
+	color.Unset()
+}
 
 func HashMD5(s string) int {
 	hasher := md5.New()
@@ -23,14 +32,18 @@ func HashMD5(s string) int {
 	return int(ringPosBigInt.Mod(hashedBigInt, maxRingPosBigInt).Uint64())
 }
 
-func (n *Node) GetResponsibleNodes(keyPos int) [REPLICATION_FACTOR]NodeData {
+func sortPositions(nodeMap NodeMap) []int {
 	posArr := []int{}
-
-	for pos := range n.NodeMap {
+	for pos, _ := range nodeMap {
 		posArr = append(posArr, pos)
 	}
-
 	sort.Ints(posArr)
+	return posArr
+}
+
+func (n *Node) GetResponsibleNodes(keyPos int) [REPLICATION_FACTOR]NodeData {
+	posArr := sortPositions(n.NodeMap)
+
 	log.Printf("Key position: %d\n", keyPos)
 	firstNodePosIndex := -1
 	for i, pos := range posArr {
@@ -52,12 +65,120 @@ func (n *Node) GetResponsibleNodes(keyPos int) [REPLICATION_FACTOR]NodeData {
 	return responsibleNodes
 }
 
-func DetermineSuccess(requestType RequestType, respChannel <-chan ChannelResp, coordMutex *sync.Mutex) (bool, map[int]APIResp) {
-	// As long as (REPLICATION_FACTOR - MIN_WRITE_SUCCESS + 1) nodes fail, we return an error to the client
-	// It does not matter if 1 node has already successfully written to disk even if the entire operation fails
-	// We let the client execute a read before retrying the write to handle that case
-	// Inspired by DynamoDB: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Programming.Errors.html
+/*
+	Largest gap between all node positions will be found and the middle position of this largest gap will be returned.
+	Returns position for new node, -1 if ring is full and new node cannot join
 
+	Middle position will be calculated as:
+	- If odd number of positions, middle position is taken (eg. {0,1,2} will mean 1 is chosen)
+	- If even number of positions, lower middle position is taken (eg. {0,1,2,3} will mean 1 is chosen)
+
+	When calculating the new position, the indexes that we use to find the gap are excluded from the available spots.
+	Eg. to find which position should be selected from {3,4,5,6}, we take (7-2)/2+2=4 (2 and 7 are excluded from available spots)
+*/
+func (n *Node) GetNewPosition() int {
+	posArr := sortPositions(n.NodeMap)
+	if len(posArr) == 1 {
+		// only one node in the system -- used total ring positions to calculate new position
+		return (NUM_RING_POSITIONS-posArr[0])/2 + posArr[0]
+	}
+
+	largestGap := 0
+	largestGapLowerIndex := -1
+	// find largest gap in the rest of the ring
+	for i := 0; i < len(posArr)-1; i++ {
+		gap := posArr[i+1] - posArr[i]
+		if gap > largestGap {
+			largestGap = gap
+			largestGapLowerIndex = i
+		}
+	}
+	// handle finding gap in loop back from largest to smallest index
+	lastGap := (posArr[0] + NUM_RING_POSITIONS) - posArr[len(posArr)-1]
+	if lastGap > largestGap {
+		largestGap = lastGap
+		largestGapLowerIndex = len(posArr) - 1
+	}
+	log.Printf("Largest gap is between position %d and %d\n", posArr[largestGapLowerIndex], posArr[(largestGapLowerIndex+1)%len(posArr)])
+	if largestGap == 1 {
+		// ring is full
+		return -1
+	}
+	return (largestGap/2 + posArr[largestGapLowerIndex]) % NUM_RING_POSITIONS
+}
+
+func (n *Node) CalculateKeyset(action KeysetAction) (int, int) {
+	posArr := sortPositions(n.NodeMap)
+
+	var nodeIndex int
+	for i, pos := range posArr {
+		if pos == n.Position {
+			nodeIndex = i
+			break
+		}
+	}
+	startIndex := (nodeIndex + len(posArr) - REPLICATION_FACTOR - 1) % len(posArr)
+
+	var endIndex int
+	switch action {
+	case MIGRATE:
+		endIndex = (nodeIndex + len(posArr) - 1) % len(posArr)
+	case DELETE:
+		endIndex = (startIndex + 1) % len(posArr)
+	}
+
+	// exclusive start, inclusive end
+	return posArr[startIndex], posArr[endIndex]
+}
+
+/* Returns true if this node is the successor of the new node */
+func (n *Node) ShouldMigrateData(newPos int) bool {
+	posArr := sortPositions(n.NodeMap)
+
+	for i, pos := range posArr {
+		if pos == newPos {
+			return posArr[(i+1)%len(posArr)] == n.Position
+		}
+	}
+	// should never reach this return bcos newPos should be in posArr
+	return false
+}
+
+/* Returns true if this node is one of the 3 subsequent successors of the new node */
+func (n *Node) ShouldDeleteData(newPos int) bool {
+	posArr := sortPositions(n.NodeMap)
+
+	var newPosIndex int
+	for i, pos := range posArr {
+		if pos == newPos {
+			newPosIndex = i
+			break
+		}
+	}
+	for i := 1; i <= REPLICATION_FACTOR; i++ {
+		if posArr[(newPosIndex+i)%len(posArr)] == n.Position {
+			return true
+		}
+	}
+	return false
+}
+
+/* Returns true if position of key falls within the given range (start, end] */
+func KeyInRange(key string, start int, end int) bool {
+	pos := HashMD5(key)
+	// exclude start, include end
+	loopbackDelete := start > end && (pos > start || pos <= end)
+	regularDelete := start < end && (pos > start && pos <= end)
+	return loopbackDelete || regularDelete
+}
+
+func DetermineSuccess(requestType RequestType, respChannel <-chan ChannelResp, coordMutex *sync.Mutex) (bool, map[int]APIResp) {
+	/*
+		As long as (REPLICATION_FACTOR - MIN_WRITE_SUCCESS + 1) nodes fail, we return an error to the client
+		It does not matter if 1 node has already successfully written to disk even if the entire operation fails
+		We let the client execute a read before retrying the write to handle that case
+		Inspired by DynamoDB: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Programming.Errors.html
+	*/
 	successResps := map[int]APIResp{}
 	failResps := map[int]APIResp{}
 	var wg sync.WaitGroup
@@ -87,7 +208,11 @@ func DetermineSuccess(requestType RequestType, respChannel <-chan ChannelResp, c
 					fails[resp.From] = resp.APIResp
 					if len(fails) >= REPLICATION_FACTOR-minSuccessCount+1 {
 						// too many nodes have failed -- return error to client
-						log.Printf("Failed operation for request type %v\n", requestType)
+						if resp.APIResp.Status == SIMULATE_FAIL {
+							log.Printf("Simulate failure operation for request type %v\n", requestType)
+						} else {
+							log.Printf("Failed operation for request type %v\n", requestType)
+						}
 						for i := 0; i < (minSuccessCount - len(successes)); i++ {
 							wg.Done()
 						}
@@ -121,6 +246,19 @@ func DetermineSuccess(requestType RequestType, respChannel <-chan ChannelResp, c
 		return true, successResps
 	}
 	return false, failResps
+}
+
+/*
+checks if node has fail count > 0,
+if yes, decrement fail count return true.
+else, return false.
+*/
+func (n *Node) hasFailed() bool {
+	if n.FailCount > 0 {
+		n.FailCount--
+		return true
+	}
+	return false
 }
 
 func OrderedIntArrayEqual(a, b []int) bool {
@@ -176,8 +314,60 @@ func (o *ClientCart) IsEqual(b ClientCart) bool {
 	// if o.Items != b.Items {
 	// 	return false
 	// }
-	if !OrderedIntArrayEqual(o.VectorClock, b.VectorClock) {
+	if !reflect.DeepEqual(o.VectorClock, b.VectorClock) {
 		return false
 	}
 	return true
+}
+
+func ClientCartEqual(c1, c2 ClientCart) bool {
+	if c1.UserID != c2.UserID {
+		return false
+	}
+	if !ItemMapEqual(c1.Item, c2.Item) {
+		return false
+	}
+	if !reflect.DeepEqual(c1.VectorClock, c2.VectorClock) {
+		return false
+	}
+	return true
+}
+
+func ItemMapEqual(a, b map[int]ItemObject) bool {
+
+	return reflect.DeepEqual(a, b)
+}
+
+func ItemObjectEqual(a, b ItemObject) bool {
+	if a.Id != b.Id {
+		return false
+	}
+	if a.Name != b.Name {
+		return false
+	}
+	if a.Quantity != b.Quantity {
+		return false
+	}
+	return true
+}
+
+// checks if map1 is smaller than map2
+func VectorClockSmaller(map1, map2 map[int]int) bool {
+	for k, _ := range map1 {
+		if _, ok := map2[k]; ok {
+			if map1[k] > map2[k] {
+				return false
+			}
+		} else {
+			return false
+		}
+	}
+	return true
+}
+
+func Max(x, y int) int {
+	if x < y {
+		return y
+	}
+	return x
 }

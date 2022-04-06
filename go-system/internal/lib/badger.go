@@ -8,70 +8,97 @@ import (
 	badger "github.com/dgraph-io/badger/v3"
 )
 
-func (n *Node) BadgerWrite(o []ClientCart) error {
+// TODO: struct badger client cart
+// logic for writing array
+
+func (n *Node) BadgerWrite(c ClientCart) (BadgerObject, error) {
 	opts := badger.DefaultOptions(fmt.Sprintf("tmp/%v/badger", n.Id))
 	opts.Logger = nil
+
+	toWrite := BadgerObject{}
+	userid := c.UserID
+	// if conflict, no need to read
+
+	lastWritten, err := n.BadgerRead(userid)
+	if err != nil {
+		if err.Error() == "Key not found" {
+			toWrite = BadgerObject{UserID: userid, Versions: []ClientCart{c}}
+			fmt.Printf("Key not found, writing %v\n", toWrite)
+			//do nothing
+		} else {
+			return BadgerObject{}, err // Error, return empty client cart
+		}
+	} else {
+		//iterate through the versions, check whether can overwrite
+		newVersions := []ClientCart{}
+		add := true
+		for i := 0; i < len(lastWritten.Versions); i++ {
+			if VectorClockSmaller(lastWritten.Versions[i].VectorClock, c.VectorClock) {
+				// don't add to new versions if incoming can override
+				continue
+			}
+			if VectorClockSmaller(c.VectorClock, lastWritten.Versions[i].VectorClock) {
+				add = false
+			}
+			newVersions = append(newVersions, lastWritten.Versions[i])
+		}
+		if add {
+			newVersions = append(newVersions, c)
+		}
+
+		lastWritten.Versions = newVersions
+		toWrite = lastWritten
+	}
 
 	db, err := badger.Open(opts)
 	if err != nil {
 		log.Printf("Badger Error: %v\n", err)
-		return err
+		return BadgerObject{}, err
 	}
 	defer db.Close()
-	// Your code here…
-	for _, v := range o {
-		err = db.Update(func(txn *badger.Txn) error {
-			//need convert DataObject to byte array
-			//forloop
-			if v.UserID == "" {
-				log.Println("No UserId. Object is:", v)
-			}
-			dataObjectBytes, _ := json.Marshal(v)
-			err := txn.Set([]byte(v.UserID), dataObjectBytes)
-			if err != nil {
-				return err
-			}
-			return nil
-		})
+
+	err = db.Update(func(txn *badger.Txn) error {
+		//need convert DataObject to byte array
+		dataObjectBytes, _ := json.Marshal(toWrite)
+		err := txn.Set([]byte(toWrite.UserID), dataObjectBytes)
 		if err != nil {
 			return err
 		}
+		return nil
+	})
+	if err != nil {
+		return BadgerObject{}, err
 	}
-	return nil
+
+	// NOTE: returning badger object with one version DESPITE badger object possibly
+	// having MULTIPLE versions
+	return BadgerObject{UserID: userid, Versions: []ClientCart{c}}, nil
 }
 
 /**
 Returns empty DataObject if there is an error reading from the database with the provided key.
 */
-func (n *Node) BadgerRead(key string) (ClientCart, error) {
+func (n *Node) BadgerRead(key string) (BadgerObject, error) {
 	opts := badger.DefaultOptions(fmt.Sprintf("tmp/%v/badger", n.Id))
 	opts.Logger = nil
 
 	db, err := badger.Open(opts)
 	if err != nil {
 		log.Printf("Badger Error: %v\n", err)
-		return ClientCart{}, err
+		return BadgerObject{}, err
 	}
 	defer db.Close()
 	// Your code here…
 
-	res := ClientCart{}
+	res := BadgerObject{}
 	err = db.View(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte(key))
 		if err != nil {
 			return err
 		}
-
-		// Alternatively, you could also use item.ValueCopy().
-		// valCopy, err := item.ValueCopy(nil)
-		// handle(err)
-		//
 		var valCopy []byte
 
 		err = item.Value(func(val []byte) error {
-			// This func with val would only be called if item.Value encounters no error.
-
-			// Copying or parsing val is valid.
 			valCopy = append([]byte{}, val...)
 
 			return nil
@@ -136,4 +163,29 @@ func (n *Node) BadgerGetKeys() ([]string, error) {
 		return nil
 	})
 	return result, err
+}
+
+func (n *Node) BadgerMigrateWrite(data []BadgerObject) error {
+	opts := badger.DefaultOptions(fmt.Sprintf("tmp/%v/badger", n.Id))
+	opts.Logger = nil
+
+	db, err := badger.Open(opts)
+	if err != nil {
+		log.Printf("Badger Error: %v\n", err)
+		return err
+	}
+	defer db.Close()
+
+	err = db.Update(func(txn *badger.Txn) error {
+		for _, item := range data {
+			//need convert DataObject to byte array
+			dataObjectBytes, _ := json.Marshal(item)
+			err := txn.Set([]byte(item.UserID), dataObjectBytes)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	return err
 }

@@ -15,7 +15,12 @@
 # vendor/
 
 .DS_Store
+.vscode/
 
 # badger internal storage folders
 go-system/cmd/tmp/
 go-system/internal/lib/tmp/
+go-system/tmp/
+
+# always changing nginx
+nginx/
