@@ -5,7 +5,6 @@ import { CLIENTCART_ACTIONS } from "../reducers/ClientCartReducer";
 import { mergeVersions } from "../utils/merge";
 
 export const SendGetRequest = async (userId, dispatch, toast, toastIdRef) => {
-  console.log("error: ");
   await fetch(`http://localhost:8080/read-request?id=${userId}`, {
     method: "GET",
     headers: {
@@ -13,7 +12,8 @@ export const SendGetRequest = async (userId, dispatch, toast, toastIdRef) => {
     },
   })
     .then((response) => {
-      if (response.status >= 500) {
+      console.log(response);
+      if (response.status >= 502) {
         toastIdRef.current = toast({
           title: "Error",
           status: "error",
@@ -28,14 +28,24 @@ export const SendGetRequest = async (userId, dispatch, toast, toastIdRef) => {
         .json()
         .then((data) => {
           console.log("Success:", data);
+          if (data.Status === 0) {
+            toastIdRef.current = toast({
+              title: "Error",
+              status: "error",
+              description: "Get Request Error : " + data.Error,
+              duration: 2000,
+              isClosable: true,
+              position: "top-right",
+            });
+          }
           if (data.Data.UserID === "") {
             dispatch({
-              type: CLIENTCART_ACTIONS.CHANGE_USER,
+              type: CLIENTCART_ACTIONS.UPDATE_STATE,
               payload: { UserID: userId, Item: {} },
             });
           } else {
             dispatch({
-              type: CLIENTCART_ACTIONS.CHANGE_USER,
+              type: CLIENTCART_ACTIONS.UPDATE_STATE,
               payload: mergeVersions(data.Data),
             });
           }
@@ -51,7 +61,7 @@ export const SendGetRequest = async (userId, dispatch, toast, toastIdRef) => {
             position: "top-right",
           });
           dispatch({
-            type: CLIENTCART_ACTIONS.CHANGE_USER,
+            type: CLIENTCART_ACTIONS.UPDATE_STATE,
             payload: { UserID: userId, Item: {} },
           });
         });
@@ -59,7 +69,7 @@ export const SendGetRequest = async (userId, dispatch, toast, toastIdRef) => {
     .catch((err) => {
       console.log("ERROR: ", err);
       dispatch({
-        type: CLIENTCART_ACTIONS.CHANGE_USER,
+        type: CLIENTCART_ACTIONS.UPDATE_STATE,
         payload: { UserID: userId, Item: {} },
       });
     });
@@ -90,8 +100,8 @@ export const SendPostRequest = async (item, toast, toastIdRef, dispatch) => {
         position: "bottom-left",
       });
       dispatch({
-        type: CLIENTCART_ACTIONS.UPDATE_STATE,
-        payload: data.Data.Versions[0],
+        type: CLIENTCART_ACTIONS.UPDATE_VECTORCLOCK,
+        payload: data.Data.Versions[0].VectorClock,
       });
     })
     .catch((error) => {

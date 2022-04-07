@@ -50,6 +50,7 @@ const CTable = ({ state, dispatch, toast, toastRef }) => {
         [id]: { ...state.Item[id], Quantity: state.Item[id].Quantity + 1 },
       },
     };
+    dispatch({ type: CLIENTCART_ACTIONS.UPDATE_STATE, payload: newState });
     SendPostRequest(newState, toast, toastRef, dispatch);
   };
   const itemSubtract = (id) => {
@@ -65,11 +66,13 @@ const CTable = ({ state, dispatch, toast, toastRef }) => {
         [id]: { ...state.Item[id], Quantity: state.Item[id].Quantity - 1 },
       },
     };
+    dispatch({ type: CLIENTCART_ACTIONS.UPDATE_STATE, payload: newState });
     SendPostRequest(newState, toast, toastRef, dispatch);
   };
   const itemDelete = () => {
     delete state.Item[toDelete];
     var newState = state;
+    dispatch({ type: CLIENTCART_ACTIONS.UPDATE_STATE, payload: newState });
     SendPostRequest(newState, toast, toastRef, dispatch);
     onClose();
   };

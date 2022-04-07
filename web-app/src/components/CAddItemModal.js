@@ -55,10 +55,6 @@ const CAddItemModal = ({ state, dispatch, appToast, appToastRef }) => {
       });
       return;
     }
-    // dispatch({
-    //   type: CLIENTCART_ACTIONS.NEW,
-    //   payload: { itemId, itemName, dispatch },
-    // });
     var newState = {
       ...state,
       Item: {
@@ -70,6 +66,7 @@ const CAddItemModal = ({ state, dispatch, appToast, appToastRef }) => {
         },
       },
     };
+    dispatch({ type: CLIENTCART_ACTIONS.UPDATE_STATE, payload: newState });
     SendPostRequest(newState, appToast, appToastRef, dispatch);
     onClose();
   };

@@ -132,7 +132,7 @@ func TestOverwriteConflictClientCarts(t *testing.T) {
 		}, expected: BadgerObject{
 			UserID: "8",
 			Versions: []ClientCart{
-				ClientCart{
+				{
 					UserID: "8",
 					Item: map[int]ItemObject{
 						15: {
@@ -186,7 +186,7 @@ func TestOverwriteConflictClientCarts(t *testing.T) {
 		expected: BadgerObject{
 			UserID: "9",
 			Versions: []ClientCart{
-				ClientCart{
+				{
 					UserID: "9",
 					Item: map[int]ItemObject{
 						12: {
@@ -201,6 +201,22 @@ func TestOverwriteConflictClientCarts(t *testing.T) {
 						},
 					},
 					VectorClock: map[int]int{1: 1, 2: 2, 3: 3, 4: 6, 5: 5},
+				},
+				{
+					UserID: "9",
+					Item: map[int]ItemObject{
+						12: {
+							Id:       12,
+							Name:     "Pencil",
+							Quantity: 126, //larger
+						},
+						15: {
+							Id:       15,
+							Name:     "Orange",
+							Quantity: 123, //smaller
+						},
+					},
+					VectorClock: map[int]int{1: 1, 2: 2, 3: 3, 4: 4, 5: 5},
 				},
 			},
 		},
@@ -247,7 +263,7 @@ func TestOverwriteConflictClientCarts(t *testing.T) {
 		expected: BadgerObject{
 			UserID: "75",
 			Versions: []ClientCart{
-				ClientCart{ // test delete
+				{ // test delete
 					UserID: "75",
 					Item: map[int]ItemObject{
 						13: {
@@ -268,7 +284,7 @@ func TestOverwriteConflictClientCarts(t *testing.T) {
 					},
 					VectorClock: map[int]int{1: 10, 2: 2, 3: 3, 4: 4, 5: 5},
 				},
-				ClientCart{
+				{
 					UserID: "75",
 					Item: map[int]ItemObject{
 						13: {
