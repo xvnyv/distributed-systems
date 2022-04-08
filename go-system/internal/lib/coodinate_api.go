@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 
@@ -25,7 +26,9 @@ func (n *Node) sendWriteRequest(c ClientCart, node NodeData, respChannel chan<- 
 		log.Println("Send Write Request Error: ", err)
 		// NOTE: Will have to set a timer to detect timeout for failures in DetermineSuccess if we
 		// return like this without sending any failure response to respChannel
-		return
+		if strings.Contains(err.Error(), "connection refused") {
+			return
+		}
 	}
 
 	var apiResp APIResp
@@ -151,6 +154,9 @@ func (n *Node) sendReadRequest(key string, node NodeData, respChannel chan<- Cha
 	resp, err := http.Get(base.String())
 	if err != nil {
 		log.Println("Send Read Request Error: ", err)
+		if strings.Contains(err.Error(), "connection refused") {
+			return
+		}
 	}
 
 	var apiResp APIResp
