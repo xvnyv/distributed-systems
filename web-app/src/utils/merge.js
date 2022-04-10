@@ -2,15 +2,47 @@ export const mergeVersions = (badgerObject) => {
   if (badgerObject.Versions.length <= 1) {
     return badgerObject.Versions[0];
   }
-  var result = badgerObject.Versions[0];
-  for (let i = 1; i < badgerObject.Versions.length; i++) {
-    result = mergeClientCarts(result, badgerObject.Versions[i]);
+  // get the latest of each client
+  //{ clientId: clientCart}
+  var versionsToMerge = {};
+
+  for (var i = 0; i < badgerObject.Versions.length; i++) {
+    var version = badgerObject.Versions[i];
+    console.log("version in badgerobject.versions", version);
+    if (versionsToMerge[version.ClientId] !== undefined) {
+      //check whether version should override
+      const d1 = versionsToMerge[version.ClientId].Timestamp;
+      const d2 = version.Timestamp;
+      console.log("d1<d2: ", d1 < d2);
+      if (d1 < d2) {
+        //override
+        versionsToMerge[version.ClientId] = version;
+      }
+      continue;
+    }
+    //get max vectorclock
+    version.VectorClock = mergeVectorClock(
+      versionsToMerge[version.ClientId],
+      version
+    );
+    //add
+    versionsToMerge[version.ClientId] = version;
+  }
+
+  var firstKey = Object.keys(versionsToMerge)[0];
+  var result = versionsToMerge[firstKey];
+  console.log("versionstomerge,", versionsToMerge);
+  var keylst = Object.keys(versionsToMerge);
+  for (var i = 1; i < keylst.length; i++) {
+    console.log(versionsToMerge[keylst[i]]);
+    result = mergeClientCarts(result, versionsToMerge[keylst[i]]);
   }
   return result;
 };
 
 const mergeClientCarts = (clientCartSelf, clientCartReceived) => {
   var output = {};
+  console.log("clientcartreceived:", clientCartReceived);
   output.UserID = clientCartReceived.UserID;
   var newmap = {};
   var clientCartItemIds = Object.keys(clientCartSelf.Item);
@@ -37,34 +69,33 @@ const mergeClientCarts = (clientCartSelf, clientCartReceived) => {
 
   output.Item = newmap;
 
-  var newVectorClock = {};
-  var selfVectorClockKeys = Object.keys(clientCartSelf.VectorClock);
-  for (var i = 0; i < selfVectorClockKeys.length; i++) {
-    Max(clientCartSelf.VectorClock[i], clientCartReceived.VectorClock[i]);
-  }
-
-  for (var key in clientCartSelf.VectorClock) {
-    if (clientCartReceived.VectorClock[key] === undefined) {
-      newVectorClock[key] = clientCartSelf.VectorClock[key];
-      continue;
-    }
-    newVectorClock[key] = Max(
-      clientCartSelf.VectorClock[key],
-      clientCartReceived.VectorClock[key]
-    );
-  }
-
-  for (var key in clientCartReceived.VectorClock) {
-    if (newVectorClock[key] === undefined) {
-      newVectorClock[key] = clientCartReceived.VectorClock[key];
-    }
-  }
+  var newVectorClock = mergeVectorClock(clientCartSelf, clientCartReceived);
 
   output.VectorClock = newVectorClock;
-
   return output;
 };
 
 const Max = (v1, v2) => {
   return v1 < v2 ? v2 : v1;
+};
+
+const mergeVectorClock = (clientCart1, clientCart2) => {
+  var newVectorClock = {};
+  var selfVectorClockKeys = Object.keys(clientCart1.VectorClock);
+  for (var i = 0; i < selfVectorClockKeys.length; i++) {
+    Max(clientCart1.VectorClock[i], clientCart2.VectorClock[i]);
+  }
+
+  for (var key in clientCart1.VectorClock) {
+    if (clientCart2.VectorClock[key] === undefined) {
+      newVectorClock[key] = clientCart1.VectorClock[key];
+      continue;
+    }
+    newVectorClock[key] = Max(
+      clientCart1.VectorClock[key],
+      clientCart2.VectorClock[key]
+    );
+  }
+
+  return newVectorClock;
 };

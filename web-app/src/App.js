@@ -16,6 +16,7 @@ import { SendGetRequest } from "./http_helpers/PostGetRequesters";
 import CTable from "./components/CTable";
 import CAddItemModal from "./components/CAddItemModal";
 import { mergeVersions } from "./utils/merge";
+import { v4 } from "uuid";
 
 var clientCartObject = {
   UserID: "SAMPLE",
@@ -43,6 +44,7 @@ function App() {
   const toastIdRef = React.useRef();
 
   const [userId, setUserId] = useState();
+  const [clientId, setClientId] = useState(v4());
 
   const CheckEnter = (e) => {
     // setUserId(e.target.value);
@@ -98,6 +100,7 @@ function App() {
               dispatch={clientCartDispatch}
               appToast={toast}
               appToastRef={toastIdRef}
+              clientId={clientId}
             />
             {/* <CAddUserModal state={state} dispatch={dispatch} /> */}
           </Box>
@@ -115,6 +118,7 @@ function App() {
               dispatch={clientCartDispatch}
               toast={toast}
               toastRef={toastIdRef}
+              clientId={clientId}
             />
           </Box>
         </GridItem>

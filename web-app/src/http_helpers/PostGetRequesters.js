@@ -76,8 +76,15 @@ export const SendGetRequest = async (userId, dispatch, toast, toastIdRef) => {
   // const data = await res.json();
 };
 
-export const SendPostRequest = async (item, toast, toastIdRef, dispatch) => {
-  item["Guid"] = uuidv4();
+export const SendPostRequest = async (
+  item,
+  toast,
+  toastIdRef,
+  dispatch,
+  clientId
+) => {
+  item.ClientId = clientId;
+  item.Timestamp = Date.now();
   console.log("sending");
   await fetch(`http://localhost:8080/write-request`, {
     method: "POST",

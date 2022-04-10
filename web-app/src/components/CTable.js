@@ -21,7 +21,7 @@ import { CLIENTCART_ACTIONS } from "../reducers/ClientCartReducer";
 import React, { useState } from "react";
 import { SendPostRequest } from "../http_helpers/PostGetRequesters";
 
-const CTable = ({ state, dispatch, toast, toastRef }) => {
+const CTable = ({ state, dispatch, toast, toastRef, clientId }) => {
   //delete alert
   const { isOpen, onOpen, onClose } = useDisclosure();
   const cancelRef = React.useRef();
@@ -51,7 +51,7 @@ const CTable = ({ state, dispatch, toast, toastRef }) => {
       },
     };
     dispatch({ type: CLIENTCART_ACTIONS.UPDATE_STATE, payload: newState });
-    SendPostRequest(newState, toast, toastRef, dispatch);
+    SendPostRequest(newState, toast, toastRef, dispatch, clientId);
   };
   const itemSubtract = (id) => {
     if (state.Item[id].Quantity === 1) {
@@ -67,13 +67,13 @@ const CTable = ({ state, dispatch, toast, toastRef }) => {
       },
     };
     dispatch({ type: CLIENTCART_ACTIONS.UPDATE_STATE, payload: newState });
-    SendPostRequest(newState, toast, toastRef, dispatch);
+    SendPostRequest(newState, toast, toastRef, dispatch, clientId);
   };
   const itemDelete = () => {
     delete state.Item[toDelete];
     var newState = state;
     dispatch({ type: CLIENTCART_ACTIONS.UPDATE_STATE, payload: newState });
-    SendPostRequest(newState, toast, toastRef, dispatch);
+    SendPostRequest(newState, toast, toastRef, dispatch, clientId);
     onClose();
   };
 
