@@ -67,10 +67,14 @@ export const SendGetRequest = async (userId, dispatch, toast, toastIdRef) => {
         });
     })
     .catch((err) => {
-      console.log("ERROR: ", err);
-      dispatch({
-        type: CLIENTCART_ACTIONS.UPDATE_STATE,
-        payload: { UserID: userId, Item: {} },
+      console.log("ERROR: ", err.toString());
+      toastIdRef.current = toast({
+        title: "Error",
+        status: "error",
+        description: err.toString(),
+        duration: 2000,
+        isClosable: true,
+        position: "top-right",
       });
     });
   // const data = await res.json();

@@ -15,17 +15,17 @@ export const mergeVersions = (badgerObject) => {
       const d2 = version.Timestamp;
       console.log("d1<d2: ", d1 < d2);
       if (d1 < d2) {
+        //get max vectorclock before overriding
+        version.VectorClock = mergeVectorClock(
+          versionsToMerge[version.ClientId],
+          version
+        );
         //override
         versionsToMerge[version.ClientId] = version;
       }
       continue;
     }
-    //get max vectorclock
-    version.VectorClock = mergeVectorClock(
-      versionsToMerge[version.ClientId],
-      version
-    );
-    //add
+    //add version to new clientID
     versionsToMerge[version.ClientId] = version;
   }
 
