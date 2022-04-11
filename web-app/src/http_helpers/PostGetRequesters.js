@@ -1,5 +1,3 @@
-// dependencies
-import { v4 as uuidv4 } from "uuid";
 //Helper functions
 import { CLIENTCART_ACTIONS } from "../reducers/ClientCartReducer";
 import { mergeVersions } from "../utils/merge";

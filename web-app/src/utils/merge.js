@@ -33,7 +33,7 @@ export const mergeVersions = (badgerObject) => {
   var result = versionsToMerge[firstKey];
   console.log("versionstomerge,", versionsToMerge);
   var keylst = Object.keys(versionsToMerge);
-  for (var i = 1; i < keylst.length; i++) {
+  for (i = 1; i < keylst.length; i++) {
     console.log(versionsToMerge[keylst[i]]);
     result = mergeClientCarts(result, versionsToMerge[keylst[i]]);
   }
@@ -60,8 +60,8 @@ const mergeClientCarts = (clientCartSelf, clientCartReceived) => {
   }
 
   var clientCartReceivedItemIds = Object.keys(clientCartReceived.Item);
-  for (var i = 0; i < clientCartReceivedItemIds.length; i++) {
-    var currentKey = clientCartReceivedItemIds[i];
+  for (i = 0; i < clientCartReceivedItemIds.length; i++) {
+    currentKey = clientCartReceivedItemIds[i];
     if (!newmap[currentKey]) {
       newmap[currentKey] = clientCartReceived.Item[currentKey];
     }

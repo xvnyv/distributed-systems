@@ -99,10 +99,19 @@ const CTable = ({ state, dispatch, toast, toastRef, clientId }) => {
                 <Td>{state.Item[n][x]}</Td>
               ))}
               <Td>
-                <Button marginRight={5} onClick={(e) => itemAdd(n)}>
+                <Button
+                  marginRight={5}
+                  onClick={(e) => itemAdd(n)}
+                  colorScheme={"teal"}
+                  variant={"ghost"}
+                >
                   <AddIcon />
                 </Button>
-                <Button onClick={(e) => itemSubtract(n)}>
+                <Button
+                  onClick={(e) => itemSubtract(n)}
+                  colorScheme={"pink"}
+                  variant={"ghost"}
+                >
                   <MinusIcon />
                 </Button>
               </Td>
