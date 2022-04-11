@@ -147,7 +147,7 @@ func (n *Node) JoinSystem(init bool) {
 		return
 	}
 	// send request to join
-	resp, err := http.Get(fmt.Sprintf("%s:%d/join-request", BASE_URL, LOAD_BALANCER_PORT))
+	resp, err := http.Get(fmt.Sprintf("%s:%d/join-request?node=%d", BASE_URL, LOAD_BALANCER_PORT, n.Id))
 	if err != nil {
 		// end program if cannot join
 		log.Fatalf("Join Request Error: %s\n", err)
@@ -171,13 +171,17 @@ func (n *Node) JoinSystem(init bool) {
 
 	newNodeData := NodeData{Id: n.Id, Ip: n.Ip, Port: n.Port, Position: n.Position}
 
-	jsonData, _ := json.Marshal(newNodeData)
-	// announce position to all other nodes
-	for _, nodeData := range n.NodeMap {
-		joinWg.Add(1)
-		go n.sendJoinBroadcast(nodeData, jsonData)
+	// skip join-broadcast if node has just returned from temporary failure
+	if _, ok := n.NodeMap[n.Position]; !ok {
+		jsonData, _ := json.Marshal(newNodeData)
+		// announce position to all other nodes
+		for _, nodeData := range n.NodeMap {
+			joinWg.Add(1)
+			go n.sendJoinBroadcast(nodeData, jsonData)
+		}
+		joinWg.Wait()
+		n.NodeMap[n.Position] = newNodeData
 	}
-	joinWg.Wait()
-	n.NodeMap[n.Position] = newNodeData
+
 	log.Println("Joining process completed")
 }

@@ -113,8 +113,21 @@ func (n *Node) SimulateFailRequest(w http.ResponseWriter, r *http.Request) {
 /* Calculate new node position and send position to new node */
 func (n *Node) handleJoinRequest(w http.ResponseWriter, r *http.Request) {
 	ColorLog("ENDPOINT /join-request HIT", color.FgMagenta)
-	// calculate new node position
-	newPos := n.GetNewPosition()
+
+	query := r.URL.Query()
+	newNodeId, err := strconv.Atoi(query.Get("node"))
+	if err != nil {
+		log.Println("Error parising Node ID: ", err)
+		w.WriteHeader(400)
+		return
+	}
+	// check if node is existing node rejoining system
+	newPos := n.GetPositionFromNodeMap(newNodeId)
+	log.Println("Existing position of node: ", newPos)
+	if newPos == -1 {
+		// calculate node position if is new node
+		newPos = n.GetNewPosition()
+	}
 
 	// create response
 	apiResp := JoinResp{}

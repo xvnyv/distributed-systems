@@ -65,6 +65,16 @@ func (n *Node) GetResponsibleNodes(keyPos int) [REPLICATION_FACTOR]NodeData {
 	return responsibleNodes
 }
 
+// Returns position of node, or -1 if node id is not in node map
+func (n *Node) GetPositionFromNodeMap(id int) int {
+	for _, nodeData := range n.NodeMap {
+		if nodeData.Id == id {
+			return nodeData.Position
+		}
+	}
+	return -1
+}
+
 /*
 	Largest gap between all node positions will be found and the middle position of this largest gap will be returned.
 	Returns position for new node, -1 if ring is full and new node cannot join
