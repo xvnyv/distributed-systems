@@ -20,27 +20,22 @@ import (
 func (n *Node) sendWriteRequest(c ClientCart, node NodeData, respChannel chan<- ChannelResp) {
 
 	jsonData, _ := json.Marshal(c)
-
+	var apiResp APIResp
 	resp, err := http.Post(fmt.Sprintf("%s/write", node.Ip), "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		log.Println("Send Write Request Error: ", err)
-		// NOTE: Will have to set a timer to detect timeout for failures in DetermineSuccess if we
-		// return like this without sending any failure response to respChannel
 		if strings.Contains(err.Error(), "connection refused") {
+			apiResp.Error = "Timeout"
+			apiResp.Status = FAIL
+			respChannel <- ChannelResp{node.Id, apiResp}
 			return
 		}
 	}
 
-	var apiResp APIResp
 	body, _ := io.ReadAll(resp.Body)
-	json.Unmarshal(body, &apiResp)
-
-	if resp.StatusCode == 500 {
-		log.Printf("Internal API Write Request Error: %v\n", apiResp.Error)
-	}
-	respChannel <- ChannelResp{node.Id, apiResp}
-
 	defer resp.Body.Close()
+	json.Unmarshal(body, &apiResp)
+	respChannel <- ChannelResp{node.Id, apiResp}
 }
 
 /* Send requests to all responsible nodes concurrently and wait for minimum required nodes to succeed */
