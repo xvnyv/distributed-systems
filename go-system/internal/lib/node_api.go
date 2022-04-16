@@ -98,17 +98,17 @@ func (n *Node) FulfilReadRequest(w http.ResponseWriter, r *http.Request) {
 	log.Println("Read request completed for", badgerObject)
 }
 
-func (n *Node) SimulateFailRequest(w http.ResponseWriter, r *http.Request) {
-	ColorLog("INTERNAL ENDPOINT /simulate-fail HIT", color.FgYellow)
-	query := r.URL.Query()
+// func (n *Node) SimulateFailRequest(w http.ResponseWriter, r *http.Request) {
+// 	ColorLog("INTERNAL ENDPOINT /simulate-fail HIT", color.FgYellow)
+// 	query := r.URL.Query()
 
-	count, err := strconv.Atoi(query.Get("count")) //! type string
-	if err != nil {
-		log.Println("Error with simluate fail request", err)
-	}
+// 	count, err := strconv.Atoi(query.Get("count")) //! type string
+// 	if err != nil {
+// 		log.Println("Error with simluate fail request", err)
+// 	}
 
-	n.FailCount = count
-}
+// 	n.FailCount = count
+// }
 
 /* Calculate new node position and send position to new node */
 func (n *Node) handleJoinRequest(w http.ResponseWriter, r *http.Request) {

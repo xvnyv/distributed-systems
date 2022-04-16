@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 )
 
 var joinWg sync.WaitGroup
@@ -19,7 +20,7 @@ func (n *Node) HandleRequests() {
 	// Internal API
 	http.HandleFunc("/read", n.FulfilReadRequest)
 	http.HandleFunc("/write", n.FulfilWriteRequest)
-	http.HandleFunc("/simulate-fail", n.SimulateFailRequest)
+	// http.HandleFunc("/simulate-fail", n.SimulateFailRequest)
 	http.HandleFunc("/join-request", n.handleJoinRequest)
 	http.HandleFunc("/join-broadcast", n.handleJoinBroadcast)
 	// http.HandleFunc("/handover-request", handleMessage2)
@@ -28,8 +29,13 @@ func (n *Node) HandleRequests() {
 	// External API
 	http.HandleFunc("/write-request", n.handleWriteRequest)
 	http.HandleFunc("/read-request", n.handleReadRequest)
-
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", n.Port), nil))
+	srv := &http.Server{
+		Addr:         fmt.Sprintf(":%v", n.Port),
+		Handler:      nil,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+	}
+	log.Fatal(srv.ListenAndServe())
 }
 
 func (n *Node) UpdateNginx() {

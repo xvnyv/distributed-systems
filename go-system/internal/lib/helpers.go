@@ -219,11 +219,12 @@ func DetermineSuccess(requestType RequestType, respChannel <-chan ChannelResp, c
 					fails[resp.From] = resp.APIResp
 					if len(fails) >= REPLICATION_FACTOR-minSuccessCount+1 {
 						// too many nodes have failed -- return error to client
-						if resp.APIResp.Status == SIMULATE_FAIL {
-							log.Printf("Simulate failure operation for request type %v\n", requestType)
-						} else {
-							log.Printf("Failed operation for request type %v\n", requestType)
-						}
+						// if resp.APIResp.Status == SIMULATE_FAIL {
+						// 	log.Printf("Simulate failure operation for request type %v\n", requestType)
+						// } else {
+						// 	log.Printf("Failed operation for request type %v\n", requestType)
+						// }
+						log.Printf("Failed operation for request type %v\n", requestType)
 						for i := 0; i < (minSuccessCount - len(successes)); i++ {
 							wg.Done()
 						}
