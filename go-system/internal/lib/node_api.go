@@ -24,13 +24,13 @@ func (n *Node) FulfilWriteRequest(w http.ResponseWriter, r *http.Request) {
 
 	resp := APIResp{}
 
-	if n.hasFailed() {
-		log.Printf("Request failed for node %v, fail count: %v\n", n.Id, n.FailCount)
-		w.WriteHeader(500)
-		resp.Status = SIMULATE_FAIL
-		resp.Error = "Node temporary failed."
-		return
-	}
+	// if n.hasFailed() {
+	// 	log.Printf("Request failed for node %v", n.Id)
+	// 	w.WriteHeader(500)
+	// 	resp.Status = SIMULATE_FAIL
+	// 	resp.Error = "Node temporary failed."
+	// 	return
+	// }
 
 	if err != nil {
 		w.WriteHeader(500)
@@ -66,13 +66,13 @@ func (n *Node) FulfilReadRequest(w http.ResponseWriter, r *http.Request) {
 
 	resp := APIResp{}
 
-	if n.hasFailed() {
-		log.Printf("Request failed for node %v, fail count: %v\n", n.Id, n.FailCount)
-		w.WriteHeader(500)
-		resp.Status = SIMULATE_FAIL
-		resp.Error = "Node temporary failed."
-		return
-	}
+	// if n.hasFailed() {
+	// 	log.Printf("Request failed for node %v, fail count: %v\n", n.Id, n.FailCount)
+	// 	w.WriteHeader(500)
+	// 	resp.Status = SIMULATE_FAIL
+	// 	resp.Error = "Node temporary failed."
+	// 	return
+	// }
 
 	if err != nil {
 		w.WriteHeader(500)

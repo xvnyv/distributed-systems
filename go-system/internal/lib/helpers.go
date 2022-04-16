@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"sort"
 	"sync"
+	"time"
 
 	"github.com/fatih/color"
 )
@@ -263,12 +264,38 @@ checks if node has fail count > 0,
 if yes, decrement fail count return true.
 else, return false.
 */
-func (n *Node) hasFailed() bool {
+
+/*func (n *Node) hasFailed() bool {
 	if n.FailCount > 0 {
 		n.FailCount--
 		return true
 	}
 	return false
+}*/
+
+/* Send requests to unresponsive nodes concurrently and wait for minimum required nodes to succeed */
+func (n *Node) timeOutDetection(c ClientCart, node NodeData) bool {
+	// resps contains the failed nodes' responses
+	//var respChannel = make(chan ChannelResp, 10)
+	timer := time.NewTimer(time.Minute * 5)
+	for {
+		select {
+		// case <-ticker.C:
+		// 	go n.sendWriteRequest(c, node, respChannel)
+		// 	resp := <-respChannel
+		// 	if resp.APIResp.Status == SUCCESS {
+		// 		// great
+		// 		ticker.Stop()
+		// 		timer.Stop()
+		// 		log.Printf("Node %v has revived \n", n.Id)
+		// 		return
+		// 	}
+		case <-timer.C:
+			// end liao
+			log.Printf("Node %v permanently failed\n", n.Id)
+			return true
+		}
+	}
 }
 
 func OrderedIntArrayEqual(a, b []int) bool {
