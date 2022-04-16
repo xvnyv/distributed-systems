@@ -243,6 +243,7 @@ func DetermineSuccess(requestType RequestType, respChannel <-chan ChannelResp, c
 
 			// wait too long liao
 			case <-timer.C:
+				coordMutex.Lock()
 				log.Printf("Timeout from replication!\n")
 				for i := 0; i < (minSuccessCount - len(successes)); i++ {
 					wg.Done()
