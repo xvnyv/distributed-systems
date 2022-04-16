@@ -258,19 +258,6 @@ func DetermineSuccess(requestType RequestType, respChannel <-chan ChannelResp, c
 	return false, failResps
 }
 
-/*
-checks if node has fail count > 0,
-if yes, decrement fail count return true.
-else, return false.
-*/
-func (n *Node) hasFailed() bool {
-	if n.FailCount > 0 {
-		n.FailCount--
-		return true
-	}
-	return false
-}
-
 func OrderedIntArrayEqual(a, b []int) bool {
 	if len(a) != len(b) {
 		return false

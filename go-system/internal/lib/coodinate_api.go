@@ -58,7 +58,7 @@ func (n *Node) sendWriteRequests(c ClientCart, nodes [REPLICATION_FACTOR]NodeDat
 func (n *Node) hintedWriteRequest(c ClientCart, node NodeData) {
 	// resps contains the failed nodes' responses
 	var respChannel = make(chan ChannelResp, 10)
-	timer := time.NewTimer(time.Minute * 5)
+	timer := time.NewTimer(time.Second * 15)
 	ticker := time.NewTicker(time.Second * 3)
 	for {
 		select {
@@ -69,12 +69,12 @@ func (n *Node) hintedWriteRequest(c ClientCart, node NodeData) {
 				// great
 				ticker.Stop()
 				timer.Stop()
-				log.Printf("Node %v has revived \n", n.Id)
+				log.Printf("Node %v has revived \n", node.Id)
 				return
 			}
 		case <-timer.C:
 			// end liao
-			log.Printf("Node %v permanently failed\n", n.Id)
+			log.Printf("Node %v permanently failed\n", node.Id)
 			ticker.Stop()
 			return
 		}
