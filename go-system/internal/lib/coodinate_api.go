@@ -51,14 +51,14 @@ func (n *Node) sendWriteRequests(c ClientCart, nodes [REPLICATION_FACTOR]NodeDat
 		go n.sendWriteRequest(c, node, respChannel)
 	}
 
-	return DetermineSuccess(WRITE, respChannel, coordMutex)
+	return DetermineSuccess(WRITE, respChannel, coordMutex, nodes)
 }
 
 /* Send requests to unresponsive nodes concurrently and wait for minimum required nodes to succeed */
 func (n *Node) hintedWriteRequest(c ClientCart, node NodeData) {
 	// resps contains the failed nodes' responses
 	var respChannel = make(chan ChannelResp, 10)
-	timer := time.NewTimer(time.Minute * 5)
+	timer := time.NewTimer(time.Second * 15)
 	ticker := time.NewTicker(time.Second * 3)
 	for {
 		select {
@@ -181,7 +181,7 @@ func (n *Node) sendReadRequests(key string, nodes [REPLICATION_FACTOR]NodeData, 
 	}
 
 	// TODO: DETECT NODE FAILURE IN DETERMINE SUCCESS
-	return DetermineSuccess(READ, respChannel, coordMutex)
+	return DetermineSuccess(READ, respChannel, coordMutex, nodes)
 }
 
 /* Message handler for read requests for external API to client application */

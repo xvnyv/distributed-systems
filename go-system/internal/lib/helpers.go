@@ -183,7 +183,7 @@ func KeyInRange(key string, start int, end int) bool {
 	return loopbackDelete || regularDelete
 }
 
-func DetermineSuccess(requestType RequestType, respChannel <-chan ChannelResp, coordMutex *sync.Mutex) (bool, map[int]APIResp) {
+func DetermineSuccess(requestType RequestType, respChannel <-chan ChannelResp, coordMutex *sync.Mutex, nodes [REPLICATION_FACTOR]NodeData) (bool, map[int]APIResp) {
 	/*
 		As long as (REPLICATION_FACTOR - MIN_WRITE_SUCCESS + 1) nodes fail, we return an error to the client
 		It does not matter if 1 node has already successfully written to disk even if the entire operation fails
@@ -204,6 +204,7 @@ func DetermineSuccess(requestType RequestType, respChannel <-chan ChannelResp, c
 	wg.Add(minSuccessCount)
 
 	go func(successes map[int]APIResp, fails map[int]APIResp) {
+		timer := time.NewTimer(10 * time.Second)
 	Loop:
 		for {
 			select {
@@ -240,13 +241,19 @@ func DetermineSuccess(requestType RequestType, respChannel <-chan ChannelResp, c
 				}
 				coordMutex.Unlock()
 
-				// TODO: ADD CHANNEL HERE TO DETECT TIMEOUT
-				// IF DID NOT HIT minSuccessCount, THEN WE SEND AN ERROR TO THE CLIENT
-				// IF minSuccessCount IS HIT BUT NODES TIMED OUT, SEND HINTED HANDOFF
-
-				// TODO: actually, we will need to determine how we are going to simulate failed nodes
-				// will we get an error while sending the API request like connection rejected?
-				// or will the nodes simply not respond?
+			// wait too long liao
+			case <-timer.C:
+				log.Printf("Timeout from replication!\n")
+				for i := 0; i < (minSuccessCount - len(successes)); i++ {
+					wg.Done()
+				}
+				for _, nodeDat := range nodes {
+					if _, ok := successes[nodeDat.Id]; !ok {
+						fails[nodeDat.Id] = APIResp{} // please work
+					}
+				}
+				defer coordMutex.Unlock()
+				break Loop
 			}
 		}
 	}(successResps, failResps)
