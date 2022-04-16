@@ -39,7 +39,7 @@ func (n *Node) sendWriteRequest(c ClientCart, node NodeData, respChannel chan<- 
 }
 
 /* Send requests to all responsible nodes concurrently and wait for minimum required nodes to succeed */
-func (n *Node) sendWriteRequests(c ClientCart, nodes [REPLICATION_FACTOR]NodeData, coordMutex *sync.Mutex) (bool, map[int]APIResp) {
+func (n *Node) sendWriteRequests(c ClientCart, nodes [REPLICATION_FACTOR]NodeData, coordMutex *sync.Mutex) (bool, map[int]APIResp, map[int]APIResp) {
 	var respChannel = make(chan ChannelResp, 10)
 
 	for _, node := range nodes {
@@ -117,23 +117,24 @@ func (n *Node) handleWriteRequest(w http.ResponseWriter, r *http.Request) {
 	// update vector clock using coordinator's ID
 	c.VectorClock[n.Id] += 1
 
-	success, resps := n.sendWriteRequests(c, responsibleNodes, &coordMutex)
+	success, SuccessResps, FailResps := n.sendWriteRequests(c, responsibleNodes, &coordMutex)
 
 	if success {
 		w.WriteHeader(201)
 	} else {
 		w.WriteHeader(500)
-		for id := range resps {
-			for _, nodeData := range n.NodeMap {
-				if nodeData.Id == id {
-					go n.hintedWriteRequest(c, nodeData)
-				}
+	}
+	for id := range FailResps {
+		for _, nodeData := range n.NodeMap {
+			if nodeData.Id == id {
+				go n.hintedWriteRequest(c, nodeData)
 			}
 		}
 	}
+
 	w.Header().Set("Content-Type", "application/json")
 	coordMutex.Lock()
-	for _, v := range resps {
+	for _, v := range SuccessResps {
 		json.NewEncoder(w).Encode(v)
 		break
 	}
@@ -168,7 +169,7 @@ func (n *Node) sendReadRequest(key string, node NodeData, respChannel chan<- Cha
 }
 
 /* Send requests to all responsible nodes concurrently and wait for minimum required nodes to succeed */
-func (n *Node) sendReadRequests(key string, nodes [REPLICATION_FACTOR]NodeData, coordMutex *sync.Mutex) (bool, map[int]APIResp) {
+func (n *Node) sendReadRequests(key string, nodes [REPLICATION_FACTOR]NodeData, coordMutex *sync.Mutex) (bool, map[int]APIResp, map[int]APIResp) {
 	var respChannel = make(chan ChannelResp, 10)
 
 	for _, node := range nodes {
@@ -191,7 +192,7 @@ func (n *Node) handleReadRequest(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Responsible nodes: %+v", responsibleNodes)
 
 	var coordMutex sync.Mutex
-	success, resps := n.sendReadRequests(userId, responsibleNodes, &coordMutex)
+	success, SuccessResps, _ := n.sendReadRequests(userId, responsibleNodes, &coordMutex)
 
 	// TODO: this section has to be edited to catch conflicts in case of success
 	if success {
@@ -208,7 +209,7 @@ func (n *Node) handleReadRequest(w http.ResponseWriter, r *http.Request) {
 
 	// check
 
-	for _, v := range resps {
+	for _, v := range SuccessResps {
 		json.NewEncoder(w).Encode(v)
 		break
 
