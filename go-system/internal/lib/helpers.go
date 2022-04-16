@@ -233,14 +233,6 @@ func DetermineSuccess(requestType RequestType, respChannel <-chan ChannelResp, c
 					break Loop
 				}
 				coordMutex.Unlock()
-
-				// TODO: ADD CHANNEL HERE TO DETECT TIMEOUT
-				// IF DID NOT HIT minSuccessCount, THEN WE SEND AN ERROR TO THE CLIENT
-				// IF minSuccessCount IS HIT BUT NODES TIMED OUT, SEND HINTED HANDOFF
-
-				// TODO: actually, we will need to determine how we are going to simulate failed nodes
-				// will we get an error while sending the API request like connection rejected?
-				// or will the nodes simply not respond?
 			}
 		}
 	}(successResps, failResps)

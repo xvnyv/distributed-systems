@@ -176,7 +176,6 @@ func (n *Node) sendReadRequests(key string, nodes [REPLICATION_FACTOR]NodeData, 
 		go n.sendReadRequest(key, node, respChannel)
 	}
 
-	// TODO: DETECT NODE FAILURE IN DETERMINE SUCCESS
 	return DetermineSuccess(READ, respChannel, coordMutex)
 }
 

@@ -8,9 +8,6 @@ import (
 	badger "github.com/dgraph-io/badger/v3"
 )
 
-// TODO: struct badger client cart
-// logic for writing array
-
 func (n *Node) BadgerWrite(c ClientCart) (BadgerObject, error) {
 	opts := badger.DefaultOptions(fmt.Sprintf("tmp/%v/badger", n.Id))
 	opts.Logger = nil
