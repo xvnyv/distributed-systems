@@ -252,7 +252,7 @@ func DetermineSuccess(requestType RequestType, respChannel <-chan ChannelResp, c
 						fails[nodeDat.Id] = APIResp{} // please work
 					}
 				}
-				defer coordMutex.Unlock()
+				coordMutex.Unlock()
 				break Loop
 			}
 		}
