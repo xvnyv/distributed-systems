@@ -2,7 +2,6 @@ package lib
 
 import (
 	"crypto/md5"
-	"fmt"
 	"log"
 	"math/big"
 	"reflect"
@@ -206,7 +205,6 @@ func DetermineSuccess(requestType RequestType, respChannel <-chan ChannelResp, c
 
 	go func(successes map[int]APIResp, fails map[int]APIResp) {
 		timer := time.NewTimer(10 * time.Second)
-		fmt.Printf("wg first: %v\n", wg)
 	Loop:
 		for {
 			select {
@@ -217,7 +215,6 @@ func DetermineSuccess(requestType RequestType, respChannel <-chan ChannelResp, c
 					successes[resp.From] = resp.APIResp
 					if len(successes) <= minSuccessCount {
 						wg.Done()
-						fmt.Printf("wg second: %v\n", wg)
 					}
 				} else {
 					fails[resp.From] = resp.APIResp
@@ -246,10 +243,9 @@ func DetermineSuccess(requestType RequestType, respChannel <-chan ChannelResp, c
 
 			// wait too long liao
 			case <-timer.C:
-				fmt.Printf("wg third: %v\n", wg)
 				coordMutex.Lock()
 				log.Printf("Timeout from replication!\n")
-				for i := 0; i < (minSuccessCount - len(successes)); i++ {
+				for i := 0; i < (minSuccessCount - len(successes) - len(fails)); i++ {
 					wg.Done()
 				}
 				for _, nodeDat := range nodes {
