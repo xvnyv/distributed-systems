@@ -19,7 +19,7 @@ type Node struct {
 	NodeMap      NodeMap
 	Successors   []int
 	Predecessors []int
-	FailCount    int
+	// FailCount    int
 }
 
 type Message struct {

@@ -24,23 +24,27 @@ Read will obtain information from UserID.
 func (n *Node) sendWriteRequest(c ClientCart, node NodeData, respChannel chan<- ChannelResp) {
 	jsonData, _ := json.Marshal(c)
 	resp, err := http.Post(fmt.Sprintf("%s/write", node.Ip), "application/json", bytes.NewBuffer(jsonData))
+	var apiResp APIResp
+
 	if err != nil {
 		log.Println("Send Write Request Error: ", err)
 		// NOTE: Will have to set a timer to detect timeout for failures in DetermineSuccess if we
 		// return like this without sending any failure response to respChannel
+		apiResp.Error = "Timeout"
+		apiResp.Status = FAIL
+		respChannel <- ChannelResp{node.Id, apiResp}
 		return
 	}
 
-	var apiResp APIResp
 	body, _ := io.ReadAll(resp.Body)
+	defer resp.Body.Close()
 	json.Unmarshal(body, &apiResp)
 
-	if resp.StatusCode == 500 {
-		log.Printf("Internal API Write Request Error: %v\n", apiResp.Error)
-	}
-	respChannel <- ChannelResp{node.Id, apiResp}
+	// if resp.StatusCode == 500 {
+	// 	log.Printf("Internal API Write Request Error: %v\n", apiResp.Error)
+	// }
 
-	defer resp.Body.Close()
+	respChannel <- ChannelResp{node.Id, apiResp}
 }
 
 /* Send requests to all responsible nodes concurrently and wait for minimum required nodes to succeed */
@@ -58,7 +62,7 @@ func (n *Node) sendWriteRequests(c ClientCart, nodes [REPLICATION_FACTOR]NodeDat
 func (n *Node) hintedWriteRequest(c ClientCart, node NodeData) {
 	// resps contains the failed nodes' responses
 	var respChannel = make(chan ChannelResp, 10)
-	timer := time.NewTimer(time.Minute * 5)
+	timer := time.NewTimer(time.Second * 15)
 	ticker := time.NewTicker(time.Second * 3)
 	for {
 		select {
@@ -69,12 +73,12 @@ func (n *Node) hintedWriteRequest(c ClientCart, node NodeData) {
 				// great
 				ticker.Stop()
 				timer.Stop()
-				log.Printf("Node %v has revived \n", n.Id)
+				log.Printf("Node %v has revived \n", node.Id)
 				return
 			}
 		case <-timer.C:
 			// end liao
-			log.Printf("Node %v permanently failed\n", n.Id)
+			log.Printf("Node %v permanently failed\n", node.Id)
 			ticker.Stop()
 			return
 		}
@@ -224,7 +228,7 @@ func (n *Node) HandleRequests() {
 	// Internal API
 	http.HandleFunc("/read", n.FulfilReadRequest)
 	http.HandleFunc("/write", n.FulfilWriteRequest)
-	http.HandleFunc("/simulate-fail", n.SimulateFailRequest)
+	// http.HandleFunc("/simulate-fail", n.SimulateFailRequest)
 	// http.HandleFunc("/write-success", handleMessage2)
 	// http.HandleFunc("/read-success", handleMessage2)
 	// http.HandleFunc("/join-request", handleMessage2)
@@ -238,5 +242,12 @@ func (n *Node) HandleRequests() {
 	http.HandleFunc("/write-request", n.handleWriteRequest)
 	http.HandleFunc("/read-request", n.handleReadRequest)
 
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", n.Port), nil))
+	// log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", n.Port), nil))
+	srv := &http.Server{
+		Addr:         fmt.Sprintf(":%v", n.Port),
+		Handler:      nil,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+	}
+	log.Fatal(srv.ListenAndServe())
 }
