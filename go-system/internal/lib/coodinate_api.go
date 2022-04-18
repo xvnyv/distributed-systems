@@ -53,7 +53,7 @@ func (n *Node) sendWriteRequests(c ClientCart, nodes [REPLICATION_FACTOR]NodeDat
 func (n *Node) hintedWriteRequest(c ClientCart, node NodeData) {
 	// resps contains the failed nodes' responses
 	var respChannel = make(chan ChannelResp, 10)
-	timer := time.NewTimer(time.Second * 15)
+	timer := time.NewTimer(time.Second * 25)
 	ticker := time.NewTicker(time.Second * 3)
 	for {
 		select {
