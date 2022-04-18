@@ -22,11 +22,13 @@ func (n *Node) sendWriteRequestSync(wo WriteObject, node NodeData) APIResp {
 	resp, err := http.Post(fmt.Sprintf("%s/write", node.Ip), "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		log.Println("Send Write Request Error: ", err)
+		apiResp.Status = FAIL
 		if strings.Contains(err.Error(), "connection refused") {
 			apiResp.Error = TIMEOUT_ERROR
-			apiResp.Status = FAIL
-			return apiResp
+		} else {
+			apiResp.Error = err.Error()
 		}
+		return apiResp
 	}
 
 	body, _ := io.ReadAll(resp.Body)
@@ -142,8 +144,10 @@ func (n *Node) handleWriteRequest(w http.ResponseWriter, r *http.Request) {
 	success, successResps, failResps := n.sendWriteRequests(wo, responsibleNodes, &coordMutex)
 
 	if success {
+		ColorLog("RETURN SUCCESS", color.FgGreen)
 		w.WriteHeader(201)
 	} else {
+		ColorLog("RETURN INTERNAL ERROR", color.FgRed)
 		w.WriteHeader(500)
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -224,9 +228,11 @@ func (n *Node) handleReadRequest(w http.ResponseWriter, r *http.Request) {
 
 	// TODO: this section has to be edited to catch conflicts in case of success
 	if success {
+		ColorLog("RETURN SUCCESS", color.FgGreen)
 		w.WriteHeader(200)
 	} else {
 		w.WriteHeader(500)
+		ColorLog("RETURN INTERNAL ERROR", color.FgRed)
 	}
 	w.Header().Set("Content-Type", "application/json")
 
@@ -240,7 +246,6 @@ func (n *Node) handleReadRequest(w http.ResponseWriter, r *http.Request) {
 		returnResp = failResps
 	}
 	for _, v := range returnResp {
-		log.Println(v)
 		json.NewEncoder(w).Encode(v)
 		break
 	}

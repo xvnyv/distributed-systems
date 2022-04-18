@@ -84,9 +84,12 @@ func (n *Node) FulfilWriteRequest(w http.ResponseWriter, r *http.Request) {
 	c := wo.Data
 	log.Println("Write request received with key: ", c.UserID)
 
+	// start := time.Now()
 	n.BadgerLock.Lock()
 	badgerObject, err := n.BadgerWrite(c)
 	n.BadgerLock.Unlock()
+	// end := time.Since(start)
+	// ColorLog(fmt.Sprintf("TIME TAKEN FOR WRITE: %dms", end.Milliseconds()), color.FgHiBlack)
 
 	resp := APIResp{}
 
@@ -120,7 +123,10 @@ func (n *Node) FulfilReadRequest(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("Read Request received with key: ", userId)
 
+	// start := time.Now()
 	badgerObject, err := n.BadgerRead(userId)
+	// end := time.Since(start)
+	// ColorLog(fmt.Sprintf("TIME TAKEN FOR READ: %dms", end.Milliseconds()), color.FgBlack)
 
 	resp := APIResp{}
 
