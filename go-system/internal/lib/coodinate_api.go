@@ -15,6 +15,29 @@ import (
 	"github.com/fatih/color"
 )
 
+/*
+PROBLEM
+=======
+start fresh with no records
+5 nodes, 3 responsible nodes failed, only 2 nodes store hinted replicas
+3 nodes revive, 2 nodes get actual content
+1 node with actual content fails
+read request is sent -- 1 node returns correct content, 1 node returns key not found
+failed node causes successors to be queried, but successors are no longer storing hinted replicas (deleted when nodes revived earlier)
+successors also return key not found
+==> client will receive key not found even though 1 node stores the actual value
+Note: if we do not start fresh and the node that did not get the hinted handoff after reviving already had some record for the key that we are reading,
+		then we will just end up with 2 different versions of the same client cart stored in different replicas. will be a success instead of a key not
+		found error
+
+possible solution:
+- 	count this as expected behaviour -- technically if 2 nodes fail, it will return an error of "key not found" too
+	and that is the correct behaviour since we can only read the value from 1 node in that case. so this one is a
+	similar case where though 1 node failed, its kinda like 2 nodes failed, so it returns "key not found". when
+	nodes revive later, key will be found again. anyway, even with merkle trees, it may be possible that before the
+	merge happens, there are such inconsistencies in the system too (ie. 2 replicas storing different values)
+*/
+
 /* Send individual internal write request to each node without using a goroutine (ie. synchronously) */
 func (n *Node) sendWriteRequestSync(wo WriteObject, node NodeData) APIResp {
 	jsonData, _ := json.Marshal(wo)
@@ -285,14 +308,42 @@ func (n *Node) handleReadRequest(w http.ResponseWriter, r *http.Request) {
 	// might have to change the APIResp object to return an array of carts instead so that
 	// we can return the conflicting versions
 
-	returnResp := successResps
 	if !success {
-		returnResp = failResps
+		for _, v := range failResps {
+			json.NewEncoder(w).Encode(v)
+			break
+		}
+	} else {
+		var exists bool
+		var finalApiResp APIResp
+		allVersions := []ClientCart{}
+		first := true
+
+		// sorry code sucks
+		for _, curResp := range successResps {
+			log.Printf("Merging read response client carts: %+v\n", curResp.Data.Versions)
+			if first {
+				finalApiResp = curResp
+				first = false
+			}
+			for _, version := range curResp.Data.Versions {
+				exists = false
+				for _, v := range allVersions {
+					if version.IsEqual(v) {
+						exists = true
+						break
+					}
+				}
+				if !exists {
+					log.Println("Does not exist, appending to all versions")
+					allVersions = append(allVersions, version)
+				}
+			}
+		}
+		finalApiResp.Data = BadgerObject{UserID: userId, Versions: allVersions}
+		json.NewEncoder(w).Encode(finalApiResp)
 	}
-	for _, v := range returnResp {
-		json.NewEncoder(w).Encode(v)
-		break
-	}
+
 	coordMutex.Unlock()
 
 }

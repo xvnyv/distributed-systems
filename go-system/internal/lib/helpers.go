@@ -232,8 +232,8 @@ func (n *Node) DetermineSuccess(successResps map[int]APIResp, failResps map[int]
 	} else {
 		minSuccessCount = MIN_WRITE_SUCCESS
 	}
-
-	wg.Add(minSuccessCount - len(successResps) - len(failResps))
+	// log.Printf("Added %d to wg %p", minSuccessCount - len(successResps) - len(failResps), &wg)
+	wg.Add(minSuccessCount - len(successResps))
 
 	go func(successes map[int]APIResp, fails map[int]APIResp) {
 		for {
@@ -251,6 +251,7 @@ func (n *Node) DetermineSuccess(successResps map[int]APIResp, failResps map[int]
 					if len(fails) >= REPLICATION_FACTOR-minSuccessCount+1 {
 						// too many nodes have failed -- return error to client
 						log.Printf("Failed operation for request type %v\n", requestType)
+						// log.Printf("Subtracting %d for wg %p", minSuccessCount-len(successes), &wg)
 						for i := 0; i < (minSuccessCount - len(successes)); i++ {
 							wg.Done()
 						}

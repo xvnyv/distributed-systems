@@ -162,31 +162,6 @@ func (n *Node) FulfilReadRequest(w http.ResponseWriter, r *http.Request) {
 	log.Println("Read request completed for", badgerObject)
 }
 
-func (n *Node) FulfilHintedRead(wo WriteObject, w *http.ResponseWriter) {
-	log.Println("Received hinted replica")
-	// store hinted replica
-	bo := BadgerObject{UserID: wo.Data.UserID, Versions: []ClientCart{wo.Data}}
-	n.HintedStorage[bo.UserID] = bo
-	log.Printf("Hinted Storage: %+v\n", n.HintedStorage)
-
-	go n.tryHintedHandoff(wo)
-	// return success
-	(*w).WriteHeader(201)
-	resp := APIResp{}
-	resp.Status = SUCCESS
-
-	(*w).Header().Set("Content-Type", "application/json")
-	jsonResp, err := json.Marshal(resp)
-	if err != nil {
-		log.Printf("Error happened in JSON marshal. Err: %s", err)
-		// return immediately since APIResp could not be marshalled
-		(*w).WriteHeader(500)
-		return
-	}
-	(*w).Write(jsonResp)
-	return
-}
-
 /* Calculate new node position and send position to new node */
 func (n *Node) handleJoinRequest(w http.ResponseWriter, r *http.Request) {
 	ColorLog("ENDPOINT /join-request HIT", color.FgMagenta)
