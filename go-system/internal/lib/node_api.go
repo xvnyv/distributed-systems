@@ -6,16 +6,75 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/fatih/color"
 )
 
+func (n *Node) tryHintedHandoff(wo WriteObject) {
+	ticker := time.NewTicker(HINTED_HANDOFF_INTERVAL)
+	respCh := make(chan ChannelResp)
+
+	intendedNode := n.NodeMap[n.GetPositionFromNodeMap(wo.Hint)]
+	wo.Hint = NIL_HINT
+
+	log.Printf("Starting to send hinted replica with userId %s to Node %d\n", wo.Data.UserID, intendedNode.Id)
+
+	for {
+		select {
+		case <-ticker.C:
+			// send hinted replica
+			log.Printf("Sending replica with userId %s to Node %d\n", wo.Data.UserID, intendedNode.Id)
+			go n.sendWriteRequestAsync(wo, intendedNode, respCh)
+		case chResp := <-respCh:
+			if chResp.APIResp.Status == SUCCESS {
+				// successfully handed off data
+				log.Printf("Successfully sent replica with userId %s to Node %d\n", wo.Data.UserID, intendedNode.Id)
+				ticker.Stop()
+				log.Printf("Node %d has revived \n", intendedNode.Id)
+				break
+			} else if chResp.APIResp.Error != TIMEOUT_ERROR {
+				log.Fatalf("Node %d could not successfully store data, probably a bug in the code", intendedNode.Id)
+			}
+		}
+	}
+}
+
+func (n *Node) FulfilHintedHandoff(wo WriteObject, w *http.ResponseWriter) {
+	log.Println("Received hinted replica")
+	go n.tryHintedHandoff(wo)
+	// return success
+	(*w).WriteHeader(201)
+	resp := APIResp{}
+	resp.Status = SUCCESS
+
+	(*w).Header().Set("Content-Type", "application/json")
+	jsonResp, err := json.Marshal(resp)
+	if err != nil {
+		log.Printf("Error happened in JSON marshal. Err: %s", err)
+		// return immediately since APIResp could not be marshalled
+		(*w).WriteHeader(500)
+		return
+	}
+	(*w).Write(jsonResp)
+	return
+}
+
 func (n *Node) FulfilWriteRequest(w http.ResponseWriter, r *http.Request) {
 	ColorLog("INTERNAL ENDPOINT /write HIT", color.FgYellow)
-	var c ClientCart
+	var wo WriteObject
 	body, _ := ioutil.ReadAll(r.Body)
-	json.Unmarshal(body, &c)
+	defer r.Body.Close()
+	json.Unmarshal(body, &wo)
 
+	// handle hinted handoff since normal write and hinted handoff use the same endpoint
+	if wo.Hint != NIL_HINT {
+		n.FulfilHintedHandoff(wo, &w)
+		return
+	}
+
+	// handle normal write
+	c := wo.Data
 	log.Println("Write request received with key: ", c.UserID)
 
 	n.BadgerLock.Lock()

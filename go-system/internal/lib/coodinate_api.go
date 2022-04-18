@@ -11,68 +11,88 @@ import (
 	"net/url"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/fatih/color"
 )
 
-/* Send individual internal write request to each node */
-func (n *Node) sendWriteRequest(c ClientCart, node NodeData, respChannel chan<- ChannelResp) {
-
-	jsonData, _ := json.Marshal(c)
+/* Send individual internal write request to each node without using a goroutine (ie. synchronously) */
+func (n *Node) sendWriteRequestSync(wo WriteObject, node NodeData) APIResp {
+	jsonData, _ := json.Marshal(wo)
 	var apiResp APIResp
 	resp, err := http.Post(fmt.Sprintf("%s/write", node.Ip), "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		log.Println("Send Write Request Error: ", err)
 		if strings.Contains(err.Error(), "connection refused") {
-			apiResp.Error = "Timeout"
+			apiResp.Error = TIMEOUT_ERROR
 			apiResp.Status = FAIL
-			respChannel <- ChannelResp{node.Id, apiResp}
-			return
+			return apiResp
 		}
 	}
 
 	body, _ := io.ReadAll(resp.Body)
 	defer resp.Body.Close()
 	json.Unmarshal(body, &apiResp)
-	respChannel <- ChannelResp{node.Id, apiResp}
+	return apiResp
+}
+
+/* Send individual internal write request to each node using a goroutine (ie. asynchronously) */
+func (n *Node) sendWriteRequestAsync(wo WriteObject, node NodeData, respChannel chan<- ChannelResp) {
+	apiResp := n.sendWriteRequestSync(wo, node)
+	respChannel <- ChannelResp{node, apiResp}
 }
 
 /* Send requests to all responsible nodes concurrently and wait for minimum required nodes to succeed */
-func (n *Node) sendWriteRequests(c ClientCart, nodes [REPLICATION_FACTOR]NodeData, coordMutex *sync.Mutex) (bool, map[int]APIResp, map[int]APIResp) {
+func (n *Node) sendWriteRequests(wo WriteObject, nodes [REPLICATION_FACTOR]NodeData, coordMutex *sync.Mutex) (bool, map[int]APIResp, map[int]APIResp) {
 	var respChannel = make(chan ChannelResp, 10)
 
 	for _, node := range nodes {
-		go n.sendWriteRequest(c, node, respChannel)
+		go n.sendWriteRequestAsync(wo, node, respChannel)
 	}
 
-	return DetermineSuccess(WRITE, respChannel, coordMutex)
+	successResps := map[int]APIResp{}
+	failResps := map[int]APIResp{}
+	nodesCopy := make([]NodeData, len(nodes))
+	copy(nodesCopy, nodes[:])
+	success, _, _ := n.DetermineSuccess(successResps, failResps, WRITE, &nodesCopy, respChannel, coordMutex, wo, "")
+	return success, successResps, failResps
 }
 
 /* Send requests to unresponsive nodes concurrently and wait for minimum required nodes to succeed */
-func (n *Node) hintedWriteRequest(c ClientCart, node NodeData) {
-	// resps contains the failed nodes' responses
-	var respChannel = make(chan ChannelResp, 10)
-	timer := time.NewTimer(time.Second * 25)
-	ticker := time.NewTicker(time.Second * 3)
+func (n *Node) sendHintedReplica(wo WriteObject, node NodeData, nodes *[]NodeData) ChannelResp {
+	var hintedHandoffNode NodeData
+
+	// set hint to original node
+	wo.Hint = node.Id
+
 	for {
-		select {
-		case <-ticker.C:
-			go n.sendWriteRequest(c, node, respChannel)
-			resp := <-respChannel
-			if resp.APIResp.Status == SUCCESS {
-				// great
-				ticker.Stop()
-				timer.Stop()
-				log.Printf("Node %v has revived \n", node.Id)
-				return
-			}
-		case <-timer.C:
-			// end liao
-			log.Printf("Node %v permanently failed\n", node.Id)
-			ticker.Stop()
-			return
+		// get unused predecessor to send node to hinted handoff
+		hintedHandoffNode = GetSuccessor(hintedHandoffNode, n.NodeMap)
+		if hintedHandoffNode.Id == node.Id {
+			// all nodes have already been tried for storing the replicas
+			return ChannelResp{From: node, APIResp: APIResp{Status: FAIL, Error: "No nodes left to hand off replica"}}
 		}
+		if !nodeInSlice(hintedHandoffNode, *nodes) {
+			log.Printf("Handing off replica to Node %d\n", hintedHandoffNode.Id)
+			apiResp := n.sendWriteRequestSync(wo, hintedHandoffNode)
+			if apiResp.Status == SUCCESS || apiResp.Error == TIMEOUT_ERROR {
+				if apiResp.Status == SUCCESS {
+					log.Printf("Successfully handed off replica to Node %d\n", hintedHandoffNode.Id)
+				}
+				*nodes = append(*nodes, hintedHandoffNode)
+				return ChannelResp{From: hintedHandoffNode, APIResp: apiResp}
+			}
+		}
+	}
+}
+
+/* Send all hinted replicas */
+func (n *Node) sendHintedReplicas(wo WriteObject, nodes *[]NodeData, failedNodes []NodeData, handoffCh chan<- ChannelResp) {
+	log.Printf("Sending hinted replicas to %d nodes\n", len(failedNodes))
+	for _, nodeData := range failedNodes {
+		// no point sending the hinted write requests synchronously because we'll have to lock the section where we find the unused successor until we get a successful response anyway
+		// otherwise there may be a case of multiple hinted replicas being stored at the same node
+		channelResp := n.sendHintedReplica(wo, nodeData, nodes)
+		handoffCh <- channelResp
 	}
 }
 
@@ -117,29 +137,31 @@ func (n *Node) handleWriteRequest(w http.ResponseWriter, r *http.Request) {
 	// update vector clock using coordinator's ID
 	c.VectorClock[n.Id] += 1
 
-	success, SuccessResps, FailResps := n.sendWriteRequests(c, responsibleNodes, &coordMutex)
+	// create WriteObject and send requests
+	wo := WriteObject{Hint: -1, Data: c}
+	success, successResps, failResps := n.sendWriteRequests(wo, responsibleNodes, &coordMutex)
 
 	if success {
 		w.WriteHeader(201)
 	} else {
 		w.WriteHeader(500)
 	}
-	for id := range FailResps {
-		for _, nodeData := range n.NodeMap {
-			if nodeData.Id == id {
-				go n.hintedWriteRequest(c, nodeData)
-			}
-		}
-	}
-
 	w.Header().Set("Content-Type", "application/json")
 	coordMutex.Lock()
-	for _, v := range SuccessResps {
+	returnResp := successResps
+	if !success {
+		returnResp = failResps
+	}
+	for _, v := range returnResp {
 		json.NewEncoder(w).Encode(v)
 		break
 	}
 	coordMutex.Unlock()
 }
+
+// ========================================================================================================================
+// ========================================================================================================================
+// ========================================================================================================================
 
 /* Send individual internal read request to each node */
 func (n *Node) sendReadRequest(key string, node NodeData, respChannel chan<- ChannelResp) {
@@ -163,7 +185,7 @@ func (n *Node) sendReadRequest(key string, node NodeData, respChannel chan<- Cha
 		log.Println("Internal API Read Request Error:", apiResp.Error)
 	}
 
-	respChannel <- ChannelResp{node.Id, apiResp}
+	respChannel <- ChannelResp{node, apiResp}
 
 	defer resp.Body.Close()
 }
@@ -175,8 +197,12 @@ func (n *Node) sendReadRequests(key string, nodes [REPLICATION_FACTOR]NodeData, 
 	for _, node := range nodes {
 		go n.sendReadRequest(key, node, respChannel)
 	}
-
-	return DetermineSuccess(READ, respChannel, coordMutex)
+	successResps := map[int]APIResp{}
+	failResps := map[int]APIResp{}
+	nodesCopy := make([]NodeData, len(nodes))
+	copy(nodesCopy, nodes[:])
+	success, _, _ := n.DetermineSuccess(successResps, failResps, READ, &nodesCopy, respChannel, coordMutex, WriteObject{}, key)
+	return success, successResps, failResps
 }
 
 /* Message handler for read requests for external API to client application */
@@ -191,7 +217,7 @@ func (n *Node) handleReadRequest(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Responsible nodes: %+v", responsibleNodes)
 
 	var coordMutex sync.Mutex
-	success, SuccessResps, _ := n.sendReadRequests(userId, responsibleNodes, &coordMutex)
+	success, successResps, failResps := n.sendReadRequests(userId, responsibleNodes, &coordMutex)
 
 	// TODO: this section has to be edited to catch conflicts in case of success
 	if success {
@@ -206,12 +232,14 @@ func (n *Node) handleReadRequest(w http.ResponseWriter, r *http.Request) {
 	// might have to change the APIResp object to return an array of carts instead so that
 	// we can return the conflicting versions
 
-	// check
-
-	for _, v := range SuccessResps {
+	returnResp := successResps
+	if !success {
+		returnResp = failResps
+	}
+	for _, v := range returnResp {
+		log.Println(v)
 		json.NewEncoder(w).Encode(v)
 		break
-
 	}
 	coordMutex.Unlock()
 

@@ -34,6 +34,11 @@ type Message struct {
 	itemObject map[int]ItemObject
 }
 
+type WriteObject struct {
+	Hint int // used to store node id for hinted handoff
+	Data ClientCart
+}
+
 //Domain Object
 type ClientCart struct {
 	UserID      string
@@ -78,7 +83,7 @@ type MigrateResp struct {
 }
 
 type ChannelResp struct {
-	From    int // node ID
+	From    NodeData
 	APIResp APIResp
 }
 
