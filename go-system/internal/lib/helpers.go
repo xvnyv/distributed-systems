@@ -34,7 +34,7 @@ func HashMD5(s string) int {
 
 func sortPositions(nodeMap NodeMap) []int {
 	posArr := []int{}
-	for pos, _ := range nodeMap {
+	for pos := range nodeMap {
 		posArr = append(posArr, pos)
 	}
 	sort.Ints(posArr)
@@ -363,7 +363,7 @@ func ItemObjectEqual(a, b ItemObject) bool {
 
 // checks if map1 is smaller than map2
 func VectorClockSmaller(map1, map2 map[int]int) bool {
-	for k, _ := range map1 {
+	for k := range map1 {
 		if _, ok := map2[k]; ok {
 			if map1[k] > map2[k] {
 				return false
