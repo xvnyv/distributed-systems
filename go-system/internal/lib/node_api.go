@@ -31,6 +31,8 @@ func (n *Node) tryHintedHandoff(wo WriteObject) {
 				// successfully handed off data
 				log.Printf("Successfully sent replica with userId %s to Node %d\n", wo.Data.UserID, intendedNode.Id)
 				ticker.Stop()
+				delete(n.HintedStorage, chResp.APIResp.Data.UserID)
+				log.Printf("Hinted Storage: %+v\n", n.HintedStorage)
 				log.Printf("Node %d has revived \n", intendedNode.Id)
 				break
 			} else if chResp.APIResp.Error != TIMEOUT_ERROR {
@@ -42,6 +44,11 @@ func (n *Node) tryHintedHandoff(wo WriteObject) {
 
 func (n *Node) FulfilHintedHandoff(wo WriteObject, w *http.ResponseWriter) {
 	log.Println("Received hinted replica")
+	// store hinted replica
+	bo := BadgerObject{UserID: wo.Data.UserID, Versions: []ClientCart{wo.Data}}
+	n.HintedStorage[bo.UserID] = bo
+	log.Printf("Hinted Storage: %+v\n", n.HintedStorage)
+
 	go n.tryHintedHandoff(wo)
 	// return success
 	(*w).WriteHeader(201)

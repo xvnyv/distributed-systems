@@ -24,7 +24,7 @@ func main() {
 	}
 
 	var badgerLock sync.Mutex
-	node := lib.Node{Id: *idFlagPtr, Ip: fmt.Sprintf("%s:%d", lib.BASE_URL, *portFlagPtr), Port: *portFlagPtr, BadgerLock: &badgerLock}
+	node := lib.Node{Id: *idFlagPtr, Ip: fmt.Sprintf("%s:%d", lib.BASE_URL, *portFlagPtr), Port: *portFlagPtr, BadgerLock: &badgerLock, HintedStorage: map[string]lib.BadgerObject{}}
 	log.Printf("Node %d joining system\n", node.Id)
 	node.JoinSystem(*firstNodeFlagPtr)
 

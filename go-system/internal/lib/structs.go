@@ -14,14 +14,15 @@ type NodeData struct {
 type NodeMap map[int]NodeData //int refers to position in the ring
 
 type Node struct {
-	Id           int
-	Ip           string
-	Port         int
-	Position     int
-	NodeMap      NodeMap
-	Successors   []int
-	Predecessors []int
-	BadgerLock   *sync.Mutex
+	Id            int
+	Ip            string
+	Port          int
+	Position      int
+	NodeMap       NodeMap
+	Successors    []int
+	Predecessors  []int
+	BadgerLock    *sync.Mutex
+	HintedStorage map[string]BadgerObject
 }
 
 type Message struct {
