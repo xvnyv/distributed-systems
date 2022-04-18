@@ -21,7 +21,7 @@ import { CLIENTCART_ACTIONS } from "../reducers/ClientCartReducer";
 import React, { useState } from "react";
 import { SendPostRequest } from "../http_helpers/PostGetRequesters";
 
-const CTable = ({ state, dispatch, toast, toastRef }) => {
+const CTable = ({ state, dispatch, toast, toastRef, clientId }) => {
   //delete alert
   const { isOpen, onOpen, onClose } = useDisclosure();
   const cancelRef = React.useRef();
@@ -50,7 +50,8 @@ const CTable = ({ state, dispatch, toast, toastRef }) => {
         [id]: { ...state.Item[id], Quantity: state.Item[id].Quantity + 1 },
       },
     };
-    SendPostRequest(newState, toast, toastRef, dispatch);
+    dispatch({ type: CLIENTCART_ACTIONS.UPDATE_STATE, payload: newState });
+    SendPostRequest(newState, toast, toastRef, dispatch, clientId);
   };
   const itemSubtract = (id) => {
     if (state.Item[id].Quantity === 1) {
@@ -65,12 +66,14 @@ const CTable = ({ state, dispatch, toast, toastRef }) => {
         [id]: { ...state.Item[id], Quantity: state.Item[id].Quantity - 1 },
       },
     };
-    SendPostRequest(newState, toast, toastRef, dispatch);
+    dispatch({ type: CLIENTCART_ACTIONS.UPDATE_STATE, payload: newState });
+    SendPostRequest(newState, toast, toastRef, dispatch, clientId);
   };
   const itemDelete = () => {
     delete state.Item[toDelete];
     var newState = state;
-    SendPostRequest(newState, toast, toastRef, dispatch);
+    dispatch({ type: CLIENTCART_ACTIONS.UPDATE_STATE, payload: newState });
+    SendPostRequest(newState, toast, toastRef, dispatch, clientId);
     onClose();
   };
 
@@ -96,10 +99,19 @@ const CTable = ({ state, dispatch, toast, toastRef }) => {
                 <Td>{state.Item[n][x]}</Td>
               ))}
               <Td>
-                <Button marginRight={5} onClick={(e) => itemAdd(n)}>
+                <Button
+                  marginRight={5}
+                  onClick={(e) => itemAdd(n)}
+                  colorScheme={"teal"}
+                  variant={"ghost"}
+                >
                   <AddIcon />
                 </Button>
-                <Button onClick={(e) => itemSubtract(n)}>
+                <Button
+                  onClick={(e) => itemSubtract(n)}
+                  colorScheme={"pink"}
+                  variant={"ghost"}
+                >
                   <MinusIcon />
                 </Button>
               </Td>
