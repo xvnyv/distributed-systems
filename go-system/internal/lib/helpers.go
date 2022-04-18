@@ -272,49 +272,38 @@ func (n *Node) DetermineSuccess(successResps map[int]APIResp, failResps map[int]
 				// assume that no more responses will be received after this so we can close respChannel
 				log.Println("Failure timer reached -- some nodes failed without announcing")
 				remainingWgCount := minSuccessCount - len(successResps)
+
+				var curKey string
 				switch requestType {
 				case WRITE:
-					// get nodes with unannounced failures
-					failedNodes := []NodeData{}
-					for _, curNode := range n.GetResponsibleNodes(HashMD5(wo.Data.UserID)) {
-						_, inSuccess := successResps[curNode.Id]
-						_, inFail := failResps[curNode.Id]
-						if !inSuccess && !inFail {
-							failedNodes = append(failedNodes, curNode)
-						}
-					}
-
-					handoffCh := make(chan ChannelResp, REPLICATION_FACTOR)
-
-					go n.sendHintedReplicas(wo, nodes, failedNodes, handoffCh)
-					n.DetermineSuccess(successResps, failResps, requestType, nodes, handoffCh, coordMutex, wo, key)
-					// unblock
-					for i := 0; i < remainingWgCount; i++ {
-						wg.Done()
-					}
-					return
-
+					curKey = wo.Data.UserID
 				case READ:
-					// get nodes with unannounced failures
-					failedNodes := []NodeData{}
-					for _, curNode := range n.GetResponsibleNodes(HashMD5(wo.Data.UserID)) {
-						_, inSuccess := successResps[curNode.Id]
-						_, inFail := failResps[curNode.Id]
-						if !inSuccess && !inFail {
-							failedNodes = append(failedNodes, curNode)
-						}
-					}
-
-					handoffCh := make(chan ChannelResp, REPLICATION_FACTOR)
-
-					go n.getHintedReplicas(key, nodes, failedNodes, handoffCh)
-					n.DetermineSuccess(successResps, failResps, requestType, nodes, handoffCh, coordMutex, wo, key)
-					// unblock
-					for i := 0; i < remainingWgCount; i++ {
-						wg.Done()
-					}
-					return
+					curKey = key
 				}
+				// get nodes with unannounced failures
+				failedNodes := []NodeData{}
+				for _, curNode := range n.GetResponsibleNodes(HashMD5(curKey)) {
+					_, inSuccess := successResps[curNode.Id]
+					_, inFail := failResps[curNode.Id]
+					if !inSuccess && !inFail {
+						failedNodes = append(failedNodes, curNode)
+					}
+				}
+
+				handoffCh := make(chan ChannelResp, REPLICATION_FACTOR)
+
+				switch requestType {
+				case WRITE:
+					go n.sendHintedReplicas(wo, nodes, failedNodes, handoffCh)
+				case READ:
+					go n.getHintedReplicas(key, nodes, failedNodes, handoffCh)
+				}
+				n.DetermineSuccess(successResps, failResps, requestType, nodes, handoffCh, coordMutex, wo, key)
+				// unblock
+				for i := 0; i < remainingWgCount; i++ {
+					wg.Done()
+				}
+				return
 			}
 		}
 	}(successResps, failResps)

@@ -61,13 +61,13 @@ func (n *Node) sendWriteRequests(wo WriteObject, nodes [REPLICATION_FACTOR]NodeD
 
 /* Send requests to unresponsive nodes concurrently and wait for minimum required nodes to succeed */
 func (n *Node) sendHintedReplica(wo WriteObject, node NodeData, nodes *[]NodeData) ChannelResp {
-	var hintedHandoffNode NodeData
+	hintedHandoffNode := node
 
 	// set hint to original node
 	wo.Hint = node.Id
 
 	for {
-		// get unused predecessor to send node to hinted handoff
+		// get unused successor to send node to hinted handoff
 		hintedHandoffNode = GetSuccessor(hintedHandoffNode, n.NodeMap)
 		if hintedHandoffNode.Id == node.Id {
 			// all nodes have already been tried for storing the replicas
@@ -89,7 +89,7 @@ func (n *Node) sendHintedReplica(wo WriteObject, node NodeData, nodes *[]NodeDat
 
 /* Send all hinted replicas */
 func (n *Node) sendHintedReplicas(wo WriteObject, nodes *[]NodeData, failedNodes []NodeData, handoffCh chan<- ChannelResp) {
-	log.Printf("Sending hinted replicas to %d nodes\n", len(failedNodes))
+	log.Printf("Sending hinted replicas to %d nodes for key %s\n", len(failedNodes), wo.Data.UserID)
 	for _, nodeData := range failedNodes {
 		// no point sending the hinted write requests synchronously because we'll have to lock the section where we find the unused successor until we get a successful response anyway
 		// otherwise there may be a case of multiple hinted replicas being stored at the same node
@@ -172,14 +172,14 @@ func (n *Node) handleWriteRequest(w http.ResponseWriter, r *http.Request) {
 
 /* Send requests to unresponsive nodes concurrently and wait for minimum required nodes to succeed */
 func (n *Node) getHintedReplica(key string, node NodeData, nodes *[]NodeData) ChannelResp {
-	var hintedHandoffNode NodeData
+	hintedHandoffNode := node
 
 	for {
-		// get unused predecessor to send node to hinted handoff
+		// get unused successor to send node to hinted handoff
 		hintedHandoffNode = GetSuccessor(hintedHandoffNode, n.NodeMap)
 		if hintedHandoffNode.Id == node.Id {
 			// all nodes have already been tried for storing the replicas
-			return ChannelResp{From: node, APIResp: APIResp{Status: FAIL, Error: "No nodes left to hand off replica"}}
+			return ChannelResp{From: node, APIResp: APIResp{Status: FAIL, Error: "No nodes left to query for replica"}}
 		}
 		if !nodeInSlice(hintedHandoffNode, *nodes) {
 			log.Printf("Reading replica from Node %d\n", hintedHandoffNode.Id)
@@ -197,7 +197,7 @@ func (n *Node) getHintedReplica(key string, node NodeData, nodes *[]NodeData) Ch
 
 /* Send all hinted replicas */
 func (n *Node) getHintedReplicas(key string, nodes *[]NodeData, failedNodes []NodeData, handoffCh chan<- ChannelResp) {
-	log.Printf("Sending hinted replicas to %d nodes\n", len(failedNodes))
+	log.Printf("Getting hinted replicas from %d nodes for key %s\n", len(failedNodes), key)
 	for _, nodeData := range failedNodes {
 		// no point sending the hinted write requests synchronously because we'll have to lock the section where we find the unused successor until we get a successful response anyway
 		// otherwise there may be a case of multiple hinted replicas being stored at the same node
