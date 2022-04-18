@@ -170,21 +170,59 @@ func (n *Node) handleWriteRequest(w http.ResponseWriter, r *http.Request) {
 // ========================================================================================================================
 // ========================================================================================================================
 
+/* Send requests to unresponsive nodes concurrently and wait for minimum required nodes to succeed */
+func (n *Node) getHintedReplica(key string, node NodeData, nodes *[]NodeData) ChannelResp {
+	var hintedHandoffNode NodeData
+
+	for {
+		// get unused predecessor to send node to hinted handoff
+		hintedHandoffNode = GetSuccessor(hintedHandoffNode, n.NodeMap)
+		if hintedHandoffNode.Id == node.Id {
+			// all nodes have already been tried for storing the replicas
+			return ChannelResp{From: node, APIResp: APIResp{Status: FAIL, Error: "No nodes left to hand off replica"}}
+		}
+		if !nodeInSlice(hintedHandoffNode, *nodes) {
+			log.Printf("Reading replica from Node %d\n", hintedHandoffNode.Id)
+			apiResp := n.sendReadRequestSync(key, hintedHandoffNode)
+			if apiResp.Status == SUCCESS || apiResp.Error == TIMEOUT_ERROR {
+				if apiResp.Status == SUCCESS {
+					log.Printf("Successfully read replica from Node %d\n", hintedHandoffNode.Id)
+				}
+				*nodes = append(*nodes, hintedHandoffNode)
+				return ChannelResp{From: hintedHandoffNode, APIResp: apiResp}
+			}
+		}
+	}
+}
+
+/* Send all hinted replicas */
+func (n *Node) getHintedReplicas(key string, nodes *[]NodeData, failedNodes []NodeData, handoffCh chan<- ChannelResp) {
+	log.Printf("Sending hinted replicas to %d nodes\n", len(failedNodes))
+	for _, nodeData := range failedNodes {
+		// no point sending the hinted write requests synchronously because we'll have to lock the section where we find the unused successor until we get a successful response anyway
+		// otherwise there may be a case of multiple hinted replicas being stored at the same node
+		channelResp := n.getHintedReplica(key, nodeData, nodes)
+		handoffCh <- channelResp
+	}
+}
+
 /* Send individual internal read request to each node */
-func (n *Node) sendReadRequest(key string, node NodeData, respChannel chan<- ChannelResp) {
+func (n *Node) sendReadRequestSync(key string, node NodeData) APIResp {
 	// Add key to query params
 	base, _ := url.Parse(fmt.Sprintf("%s/read?id=%s", node.Ip, key)) // key = userID
 
+	var apiResp APIResp
 	// Send read request to node
 	resp, err := http.Get(base.String())
 	if err != nil {
 		log.Println("Send Read Request Error: ", err)
 		if strings.Contains(err.Error(), "connection refused") {
-			return
+			apiResp.Error = TIMEOUT_ERROR
+			apiResp.Status = FAIL
+			return apiResp
 		}
 	}
 
-	var apiResp APIResp
 	body, _ := io.ReadAll(resp.Body)
 	json.Unmarshal(body, &apiResp)
 
@@ -192,9 +230,15 @@ func (n *Node) sendReadRequest(key string, node NodeData, respChannel chan<- Cha
 		log.Println("Internal API Read Request Error:", apiResp.Error)
 	}
 
-	respChannel <- ChannelResp{node, apiResp}
-
 	defer resp.Body.Close()
+	json.Unmarshal(body, &apiResp)
+	return apiResp
+}
+
+/* Send individual internal read request to each node */
+func (n *Node) sendReadRequestAsync(key string, node NodeData, respChannel chan<- ChannelResp) {
+	apiResp := n.sendReadRequestSync(key, node)
+	respChannel <- ChannelResp{node, apiResp}
 }
 
 /* Send requests to all responsible nodes concurrently and wait for minimum required nodes to succeed */
@@ -202,7 +246,7 @@ func (n *Node) sendReadRequests(key string, nodes [REPLICATION_FACTOR]NodeData, 
 	var respChannel = make(chan ChannelResp, 10)
 
 	for _, node := range nodes {
-		go n.sendReadRequest(key, node, respChannel)
+		go n.sendReadRequestAsync(key, node, respChannel)
 	}
 	successResps := map[int]APIResp{}
 	failResps := map[int]APIResp{}

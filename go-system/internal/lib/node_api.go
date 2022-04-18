@@ -124,7 +124,15 @@ func (n *Node) FulfilReadRequest(w http.ResponseWriter, r *http.Request) {
 	log.Println("Read Request received with key: ", userId)
 
 	// start := time.Now()
-	badgerObject, err := n.BadgerRead(userId)
+	var badgerObject BadgerObject
+	var err error
+	// Check whether key exists in HintedMap
+	if _, ok := n.HintedStorage[userId]; ok {
+		//return response if found in hintedstorage
+		badgerObject = n.HintedStorage[userId]
+	} else {
+		badgerObject, err = n.BadgerRead(userId)
+	}
 	// end := time.Since(start)
 	// ColorLog(fmt.Sprintf("TIME TAKEN FOR READ: %dms", end.Milliseconds()), color.FgBlack)
 
@@ -152,6 +160,31 @@ func (n *Node) FulfilReadRequest(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Write(jsonResp)
 	log.Println("Read request completed for", badgerObject)
+}
+
+func (n *Node) FulfilHintedRead(wo WriteObject, w *http.ResponseWriter) {
+	log.Println("Received hinted replica")
+	// store hinted replica
+	bo := BadgerObject{UserID: wo.Data.UserID, Versions: []ClientCart{wo.Data}}
+	n.HintedStorage[bo.UserID] = bo
+	log.Printf("Hinted Storage: %+v\n", n.HintedStorage)
+
+	go n.tryHintedHandoff(wo)
+	// return success
+	(*w).WriteHeader(201)
+	resp := APIResp{}
+	resp.Status = SUCCESS
+
+	(*w).Header().Set("Content-Type", "application/json")
+	jsonResp, err := json.Marshal(resp)
+	if err != nil {
+		log.Printf("Error happened in JSON marshal. Err: %s", err)
+		// return immediately since APIResp could not be marshalled
+		(*w).WriteHeader(500)
+		return
+	}
+	(*w).Write(jsonResp)
+	return
 }
 
 /* Calculate new node position and send position to new node */
