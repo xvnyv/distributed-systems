@@ -1,6 +1,8 @@
 package lib
 
-import "sync"
+import (
+	"sync"
+)
 
 type MessageType int
 
@@ -45,6 +47,8 @@ type ClientCart struct {
 	UserID      string
 	Item        map[int]ItemObject
 	VectorClock map[int]int // {coordinatorId: verstion_number}
+	ClientId    string
+	Timestamp   int
 }
 
 type BadgerObject struct {

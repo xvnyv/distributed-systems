@@ -18,7 +18,13 @@ import React, { useState } from "react";
 import { SendPostRequest } from "../http_helpers/PostGetRequesters";
 import { CLIENTCART_ACTIONS } from "../reducers/ClientCartReducer";
 
-const CAddItemModal = ({ state, dispatch, appToast, appToastRef }) => {
+const CAddItemModal = ({
+  state,
+  dispatch,
+  appToast,
+  appToastRef,
+  clientId,
+}) => {
   // to control state of modal
   const { isOpen, onOpen, onClose } = useDisclosure();
 
@@ -55,10 +61,6 @@ const CAddItemModal = ({ state, dispatch, appToast, appToastRef }) => {
       });
       return;
     }
-    // dispatch({
-    //   type: CLIENTCART_ACTIONS.NEW,
-    //   payload: { itemId, itemName, dispatch },
-    // });
     var newState = {
       ...state,
       Item: {
@@ -70,7 +72,8 @@ const CAddItemModal = ({ state, dispatch, appToast, appToastRef }) => {
         },
       },
     };
-    SendPostRequest(newState, appToast, appToastRef, dispatch);
+    dispatch({ type: CLIENTCART_ACTIONS.UPDATE_STATE, payload: newState });
+    SendPostRequest(newState, appToast, appToastRef, dispatch, clientId);
     onClose();
   };
 

@@ -28,20 +28,16 @@ func (n *Node) BadgerWrite(c ClientCart) (BadgerObject, error) {
 	} else {
 		//iterate through the versions, check whether can overwrite
 		newVersions := []ClientCart{}
-		add := true
 		for i := 0; i < len(lastWritten.Versions); i++ {
 			if VectorClockSmaller(lastWritten.Versions[i].VectorClock, c.VectorClock) {
-				// don't add to new versions if incoming can override
+				// if current version is smaller than incoming version
+				// don't add to new array of versions
 				continue
 			}
-			if VectorClockSmaller(c.VectorClock, lastWritten.Versions[i].VectorClock) {
-				add = false
-			}
+			//add to new array of versions
 			newVersions = append(newVersions, lastWritten.Versions[i])
 		}
-		if add {
-			newVersions = append(newVersions, c)
-		}
+		newVersions = append(newVersions, c)
 
 		lastWritten.Versions = newVersions
 		toWrite = lastWritten
