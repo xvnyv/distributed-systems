@@ -33,7 +33,7 @@ func (n *Node) HandleRequests() {
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%v", n.Port),
 		Handler:      nil,
-		ReadTimeout:  5 * time.Second,
+		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
 	log.Fatal(srv.ListenAndServe())
@@ -60,10 +60,14 @@ func (n *Node) UpdateNginx() {
 		confPath = strings.TrimSpace(strings.Split(confPath, "nginx -c ")[1])
 
 		writeFileCmd := fmt.Sprintf(`cat << EOF > '%s'
-events {}
+worker_rlimit_nofile 20000;
+events {
+	worker_connections 10000;
+}
 
 http {
 	upstream powerpuffgirls {
+		random;
 		%s
 	}
 

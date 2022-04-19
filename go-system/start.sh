@@ -1,8 +1,12 @@
 #!/bin/bash
 
 # sorry shawn, only works for mac
+n=4
+if [ ! -z "$var" ]; then
+    n=$1
+fi
 
-dir=$(echo $PWD | sed 's! !\\\\ !g')
+dir=$(echo $PWD | sed 's! !\\\\ !g')/../go-system
 echo $dir
 osascript -e "
     tell application \"Terminal\" 
@@ -10,7 +14,7 @@ osascript -e "
     end tell
     "
 sleep 1s
-for i in {1..9}
+for i in $(seq 1 $n)
 do
 padI=`printf %03d $i`
 echo $padI
