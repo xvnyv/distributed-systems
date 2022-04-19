@@ -98,6 +98,18 @@ export const SendPostRequest = async (
     .then((response) => response.json())
     .then((data) => {
       console.log("success: ", data);
+      if (data.Status === 0) {
+        toastIdRef.current = toast({
+          title: "Error",
+          status: "error",
+          description: "Post Request Error : " + data.Error,
+          duration: 2000,
+          isClosable: true,
+          position: "top-right",
+        });
+        return;
+      }
+
       toastIdRef.current = toast({
         title: "Saved",
         status: "success",
