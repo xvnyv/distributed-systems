@@ -25,6 +25,8 @@ func main() {
 
 	var badgerLock sync.Mutex
 	node := lib.Node{Id: *idFlagPtr, Ip: fmt.Sprintf("%s:%d", lib.BASE_URL, *portFlagPtr), Port: *portFlagPtr, BadgerLock: &badgerLock, HintedStorage: map[string]lib.BadgerObject{}}
+
+	node.OpenBadger()
 	log.Printf("Node %d joining system\n", node.Id)
 	node.JoinSystem(*firstNodeFlagPtr)
 
@@ -35,4 +37,5 @@ func main() {
 
 	fmt.Println("Press Enter to end")
 	fmt.Scanln()
+	node.CloseBadger()
 }

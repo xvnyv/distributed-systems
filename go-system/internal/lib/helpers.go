@@ -361,10 +361,9 @@ func UnorderedStringArrayEqual(a, b []string) bool {
 		}
 	}
 	return true
-
 }
 
-func (o *ClientCart) IsEqual(b ClientCart) bool {
+func (o ClientCart) IsEqual(b ClientCart) bool {
 	if !reflect.DeepEqual(o, b) {
 		return false
 	}

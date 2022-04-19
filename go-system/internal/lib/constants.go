@@ -17,6 +17,7 @@ const (
 	HANDOFF_TIMEOUT         time.Duration = 25 * time.Second
 	TIMEOUT_ERROR           string        = "Timeout"
 	NIL_HINT                int           = -1
+	DB_OPEN_RETIRES         int           = 3
 )
 
 var TEST_NODE_MAP NodeMap = NodeMap{

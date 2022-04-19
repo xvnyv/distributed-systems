@@ -131,6 +131,7 @@ func (n *Node) handleWriteRequest(w http.ResponseWriter, r *http.Request) {
 
 	var c ClientCart
 	body, _ := ioutil.ReadAll(r.Body)
+	defer r.Body.Close()
 	err := json.Unmarshal(body, &c)
 	if err != nil {
 		w.WriteHeader(400)
@@ -239,11 +240,13 @@ func (n *Node) sendReadRequestSync(key string, node NodeData) APIResp {
 	resp, err := http.Get(base.String())
 	if err != nil {
 		log.Println("Send Read Request Error: ", err)
+		apiResp.Status = FAIL
 		if strings.Contains(err.Error(), "connection refused") {
 			apiResp.Error = TIMEOUT_ERROR
-			apiResp.Status = FAIL
-			return apiResp
+		} else {
+			apiResp.Error = err.Error()
 		}
+		return apiResp
 	}
 
 	body, _ := io.ReadAll(resp.Body)
@@ -321,7 +324,6 @@ func (n *Node) handleReadRequest(w http.ResponseWriter, r *http.Request) {
 
 		// sorry code sucks
 		for _, curResp := range successResps {
-			log.Printf("Merging read response client carts: %+v\n", curResp.Data.Versions)
 			if first {
 				finalApiResp = curResp
 				first = false
@@ -343,7 +345,5 @@ func (n *Node) handleReadRequest(w http.ResponseWriter, r *http.Request) {
 		finalApiResp.Data = BadgerObject{UserID: userId, Versions: allVersions}
 		json.NewEncoder(w).Encode(finalApiResp)
 	}
-
 	coordMutex.Unlock()
-
 }

@@ -36,7 +36,7 @@ func (n *Node) tryHintedHandoff(wo WriteObject) {
 				log.Printf("Node %d has revived \n", intendedNode.Id)
 				break
 			} else if chResp.APIResp.Error != TIMEOUT_ERROR {
-				log.Fatalf("Node %d could not successfully store data, probably a bug in the code", intendedNode.Id)
+				log.Printf("Node %d could not successfully store data, probably a bug in the code\n", intendedNode.Id)
 			}
 		}
 	}
