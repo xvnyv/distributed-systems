@@ -365,13 +365,7 @@ func UnorderedStringArrayEqual(a, b []string) bool {
 }
 
 func (o *ClientCart) IsEqual(b ClientCart) bool {
-	if o.UserID != b.UserID {
-		return false
-	}
-	// if o.Items != b.Items {
-	// 	return false
-	// }
-	if !reflect.DeepEqual(o.VectorClock, b.VectorClock) {
+	if !reflect.DeepEqual(o, b) {
 		return false
 	}
 	return true
