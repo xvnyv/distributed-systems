@@ -1,0 +1,21 @@
+First request sent at: 2022-04-21 05:33:55.5703175 +0800 +08 m=+0.211310626
+Number of nodes: 9
+Request type: read-write
+Average request rate: 10.03/s
+
+Total requests: 600
+Successful requests: 600
+Success rate: 1
+Average latency: 5.263457ms
+Status Codes: [200: 300, 201: 300]
+
+Buckets                  	#       %         
+[0s,          5ms]       	213     35.50     ########
+[5ms,        10ms]       	383     63.83     ###############
+[10ms,       20ms]       	4       0.67      #
+[20ms,       30ms]       	0       0.00      
+[30ms,       50ms]       	0       0.00      
+[50ms,      100ms]       	0       0.00      
+[100ms,     500ms]       	0       0.00      
+[500ms,        1s]       	0       0.00      
+[1s,         +Inf]       	0       0.00      

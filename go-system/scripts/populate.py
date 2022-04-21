@@ -15,8 +15,9 @@ ITEMS = [
 ]
 
 # fmt: off
-USERIDS = ["123", "108", "129", "188", "150", "121", "102", "127", "100", 
-           "133", "143", "144", "132", "111", "125", "154", "191"]
+# USERIDS = ["123", "108", "129", "188", "150", "121", "102", "127", "100", 
+#            "133", "143", "144", "132", "111", "125", "154", "191"]
+USERIDS = range(1000)
 
 ENDPOINT = "http://localhost:8080/write-request"
 
@@ -28,7 +29,9 @@ for userid in USERIDS:
         cur_item = ITEMS[(start+i)%len(ITEMS)]
         cur_item["Quantity"] = random.randint(1,10)
         items[cur_item["Id"]] = cur_item
-    data = {"UserID": userid, "Item": items}
-    res = requests.post(ENDPOINT, json=data)
-    
-    print(res.text)
+    data = {"UserID": str(userid), "Item": items}
+    try:
+        res = requests.post(ENDPOINT, json=data)
+        print(res.text)
+    except:
+        pass

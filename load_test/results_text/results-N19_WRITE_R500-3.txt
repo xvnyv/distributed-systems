@@ -1,0 +1,21 @@
+First request sent at: 2022-04-21 06:29:19.120218875 +0800 +08 m=+0.003323835
+Number of nodes: 19
+Request type: write
+Average request rate: 500.01/s
+
+Total requests: 30000
+Successful requests: 30000
+Success rate: 1
+Average latency: 99.167201ms
+Status Codes: [201: 30000]
+
+Buckets                  	#       %         
+[0s,          5ms]       	24097   80.32     ####################
+[5ms,        10ms]       	338     1.13      #
+[10ms,       20ms]       	441     1.47      #
+[20ms,       30ms]       	389     1.30      #
+[30ms,       50ms]       	649     2.16      #
+[50ms,      100ms]       	1189    3.96      #
+[100ms,     500ms]       	2613    8.71      ##
+[500ms,        1s]       	1       0.00      #
+[1s,         +Inf]       	283     0.94      #
