@@ -31,6 +31,12 @@ type AttackData struct {
 	encoder   vegeta.Encoder
 }
 
+type ReportData struct {
+	SuccessRate        float64
+	PercentageBelow5ms float64
+	AvgLatency         float64
+}
+
 const BASE_URL = "http://localhost:8080"
 
 var ITEMS = []Object{
@@ -132,7 +138,11 @@ func attack(fname string, typeStr string, attacker *vegeta.Attacker, targeter ve
 			time.Second,
 		},
 	}
-	out, err := os.Create(fmt.Sprintf("results_bin2/%s-%s.bin", fname, typeStr))
+	encFname := fmt.Sprintf("results_bin/%s.bin", fname)
+	if typeStr == "read-write" {
+		encFname = fmt.Sprintf("results_bin/%s-%s.bin", fname, typeStr)
+	}
+	out, err := os.Create(encFname)
 	if err != nil {
 		fmt.Printf("Error creating %s-%s.bin: %s", fname, typeStr, err)
 	}
@@ -151,6 +161,8 @@ func attack(fname string, typeStr string, attacker *vegeta.Attacker, targeter ve
 }
 
 func main() {
+	rand.Seed(time.Now().UnixNano())
+
 	fnameFlag := flag.String("f", "results", "Enter filename to store attack results")
 	typeFlag := flag.String("t", "read", "Enter request type: read,write")
 	requestRateFlag := flag.Int("r", 1, "Enter request rate (/s)")
@@ -189,7 +201,8 @@ func main() {
 	numAttackers := 1
 	go attack(*fnameFlag, *typeFlag, attacker, targeter, rate, duration)
 	if *typeFlag == "read-write" {
-		go attack(*fnameFlag, *typeFlag, attacker, secondTargeter, rate, duration)
+		secondAttacker := vegeta.NewAttacker(timeout)
+		go attack(*fnameFlag, *typeFlag+"_WRITE", secondAttacker, secondTargeter, rate, duration)
 		numAttackers++
 	}
 
@@ -201,15 +214,22 @@ func main() {
 		histogramArr = append(histogramArr, attackData.histogram)
 	}
 
-	textOut, err := os.Create(fmt.Sprintf("results_text2/%s.txt", *fnameFlag))
+	textOut, err := os.Create(fmt.Sprintf("results_text/%s.txt", *fnameFlag))
 	if err != nil {
 		fmt.Printf("Error creating %s.txt: %s", *fnameFlag, err)
 	}
 
-	jsonOut, err := os.Create(fmt.Sprintf("results_json2/%s.json", *fnameFlag))
+	jsonOut, err := os.Create(fmt.Sprintf("results_json/%s.json", *fnameFlag))
 	if err != nil {
 		fmt.Printf("Error creating %s.json: %s", *fnameFlag, err)
 	}
+
+	reportOut, err := os.Create(fmt.Sprintf("results_report/%s.json", *fnameFlag))
+	if err != nil {
+		fmt.Printf("Error creating %s.json: %s", *fnameFlag, err)
+	}
+
+	reportData := ReportData{}
 
 	earliest := metricsArr[0].Earliest.String()
 	avgRate := metricsArr[0].Rate
@@ -236,6 +256,8 @@ func main() {
 			}
 		}
 	}
+	reportData.AvgLatency = avgLatency.Seconds() * 1000
+	reportData.SuccessRate = successRate
 
 	metricsJsonBytes, _ := json.Marshal(metricsArr)
 	jsonOut.Write(metricsJsonBytes)
@@ -272,9 +294,16 @@ func main() {
 		for i := 0; i < barCnt; i++ {
 			bar += BAR_SYMBOL
 		}
+		if i == 0 {
+			reportData.PercentageBelow5ms, _ = strconv.ParseFloat(fmt.Sprintf("%.2f", percentage*100), 64)
+		}
 		bucketText := fmt.Sprintf("[%-8s%8s]", lowerBucket+",", upperBucket)
 		metricsString += fmt.Sprintf("%-25s\t%-8d%-10.2f%s\n", bucketText, cnt, percentage*100, bar)
 	}
 	textOut.WriteString(metricsString)
 	textOut.Close()
+
+	reportJsonBytes, _ := json.Marshal(reportData)
+	reportOut.Write(reportJsonBytes)
+	reportOut.Close()
 }
