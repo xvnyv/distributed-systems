@@ -2,7 +2,7 @@
 
 # sorry shawn, only works for mac
 n=4
-if [ ! -z "$var" ]; then
+if [ ! -z "$1" ]; then
     n=$1
 fi
 
