@@ -54,6 +54,7 @@ func (n *Node) FulfilHintedHandoff(wo WriteObject, w *http.ResponseWriter) {
 	(*w).WriteHeader(201)
 	resp := APIResp{}
 	resp.Status = SUCCESS
+	resp.Data = bo
 
 	(*w).Header().Set("Content-Type", "application/json")
 	jsonResp, err := json.Marshal(resp)
