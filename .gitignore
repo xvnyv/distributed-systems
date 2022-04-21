@@ -24,3 +24,9 @@ go-system/tmp/
 
 # always changing nginx
 nginx/
+
+load_test/results_bin*/
+# load_test/results_text*/
+# load_test/results_json*/
+load_test/results_html*/
+load_test/results_report*/
