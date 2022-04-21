@@ -275,36 +275,42 @@ func (n *Node) DetermineSuccess(successResps map[int]APIResp, failResps map[int]
 				remainingWgCount := minSuccessCount - len(successResps)
 
 				var curKey string
+				contactReplicas := true
 				switch requestType {
 				case WRITE:
 					curKey = wo.Data.UserID
 				case READ:
 					curKey = key
-				}
-				// get nodes with unannounced failures
-				failedNodes := []NodeData{}
-				for _, curNode := range n.GetResponsibleNodes(HashMD5(curKey)) {
-					_, inSuccess := successResps[curNode.Id]
-					_, inFail := failResps[curNode.Id]
-					if !inSuccess && !inFail {
-						failedNodes = append(failedNodes, curNode)
+					if len(successResps) >= minSuccessCount {
+						contactReplicas = false
 					}
 				}
+				if contactReplicas {
+					// get nodes with unannounced failures
+					failedNodes := []NodeData{}
+					for _, curNode := range n.GetResponsibleNodes(HashMD5(curKey)) {
+						_, inSuccess := successResps[curNode.Id]
+						_, inFail := failResps[curNode.Id]
+						if !inSuccess && !inFail {
+							failedNodes = append(failedNodes, curNode)
+						}
+					}
 
-				handoffCh := make(chan ChannelResp, REPLICATION_FACTOR)
+					handoffCh := make(chan ChannelResp, REPLICATION_FACTOR)
 
-				switch requestType {
-				case WRITE:
-					go n.sendHintedReplicas(wo, nodes, failedNodes, handoffCh)
-				case READ:
-					go n.getHintedReplicas(key, nodes, failedNodes, handoffCh)
+					switch requestType {
+					case WRITE:
+						go n.sendHintedReplicas(wo, nodes, failedNodes, handoffCh)
+					case READ:
+						go n.getHintedReplicas(key, nodes, failedNodes, handoffCh)
+					}
+					n.DetermineSuccess(successResps, failResps, requestType, nodes, handoffCh, coordMutex, wo, key)
+					// unblock
+					for i := 0; i < remainingWgCount; i++ {
+						wg.Done()
+					}
+					return
 				}
-				n.DetermineSuccess(successResps, failResps, requestType, nodes, handoffCh, coordMutex, wo, key)
-				// unblock
-				for i := 0; i < remainingWgCount; i++ {
-					wg.Done()
-				}
-				return
 			}
 		}
 	}(successResps, failResps)
