@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 )
 
 var joinWg sync.WaitGroup
@@ -19,7 +20,6 @@ func (n *Node) HandleRequests() {
 	// Internal API
 	http.HandleFunc("/read", n.FulfilReadRequest)
 	http.HandleFunc("/write", n.FulfilWriteRequest)
-	http.HandleFunc("/simulate-fail", n.SimulateFailRequest)
 	http.HandleFunc("/join-request", n.handleJoinRequest)
 	http.HandleFunc("/join-broadcast", n.handleJoinBroadcast)
 	// http.HandleFunc("/handover-request", handleMessage2)
@@ -29,7 +29,14 @@ func (n *Node) HandleRequests() {
 	http.HandleFunc("/write-request", n.handleWriteRequest)
 	http.HandleFunc("/read-request", n.handleReadRequest)
 
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", n.Port), nil))
+	// log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", n.Port), nil))
+	srv := &http.Server{
+		Addr:         fmt.Sprintf(":%v", n.Port),
+		Handler:      nil,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+	}
+	log.Fatal(srv.ListenAndServe())
 }
 
 func (n *Node) UpdateNginx() {
@@ -53,10 +60,14 @@ func (n *Node) UpdateNginx() {
 		confPath = strings.TrimSpace(strings.Split(confPath, "nginx -c ")[1])
 
 		writeFileCmd := fmt.Sprintf(`cat << EOF > '%s'
-events {}
+worker_rlimit_nofile 20000;
+events {
+	worker_connections 10000;
+}
 
 http {
 	upstream powerpuffgirls {
+		random;
 		%s
 	}
 
@@ -147,7 +158,7 @@ func (n *Node) JoinSystem(init bool) {
 		return
 	}
 	// send request to join
-	resp, err := http.Get(fmt.Sprintf("%s:%d/join-request", BASE_URL, LOAD_BALANCER_PORT))
+	resp, err := http.Get(fmt.Sprintf("%s:%d/join-request?node=%d", BASE_URL, LOAD_BALANCER_PORT, n.Id))
 	if err != nil {
 		// end program if cannot join
 		log.Fatalf("Join Request Error: %s\n", err)
@@ -171,13 +182,17 @@ func (n *Node) JoinSystem(init bool) {
 
 	newNodeData := NodeData{Id: n.Id, Ip: n.Ip, Port: n.Port, Position: n.Position}
 
-	jsonData, _ := json.Marshal(newNodeData)
-	// announce position to all other nodes
-	for _, nodeData := range n.NodeMap {
-		joinWg.Add(1)
-		go n.sendJoinBroadcast(nodeData, jsonData)
+	// skip join-broadcast if node has just returned from temporary failure
+	if _, ok := n.NodeMap[n.Position]; !ok {
+		jsonData, _ := json.Marshal(newNodeData)
+		// announce position to all other nodes
+		for _, nodeData := range n.NodeMap {
+			joinWg.Add(1)
+			go n.sendJoinBroadcast(nodeData, jsonData)
+		}
+		joinWg.Wait()
+		n.NodeMap[n.Position] = newNodeData
 	}
-	joinWg.Wait()
-	n.NodeMap[n.Position] = newNodeData
+
 	log.Println("Joining process completed")
 }

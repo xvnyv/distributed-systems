@@ -16,15 +16,15 @@ type NodeData struct {
 type NodeMap map[int]NodeData //int refers to position in the ring
 
 type Node struct {
-	Id           int
-	Ip           string
-	Port         int
-	Position     int
-	NodeMap      NodeMap
-	Successors   []int
-	Predecessors []int
-	BadgerLock   *sync.Mutex
-	FailCount    int
+	Id            int
+	Ip            string
+	Port          int
+	Position      int
+	NodeMap       NodeMap
+	Successors    []int
+	Predecessors  []int
+	BadgerLock    *sync.Mutex
+	HintedStorage map[string]BadgerObject
 }
 
 type Message struct {
@@ -35,6 +35,11 @@ type Message struct {
 	Content    string
 	MetaData   string // may contain intended receiver
 	itemObject map[int]ItemObject
+}
+
+type WriteObject struct {
+	Hint int // used to store node id for hinted handoff
+	Data ClientCart
 }
 
 //Domain Object
@@ -83,7 +88,7 @@ type MigrateResp struct {
 }
 
 type ChannelResp struct {
-	From    int // node ID
+	From    NodeData
 	APIResp APIResp
 }
 

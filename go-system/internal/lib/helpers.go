@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"sort"
 	"sync"
+	"time"
 
 	"github.com/fatih/color"
 )
@@ -41,6 +42,39 @@ func sortPositions(nodeMap NodeMap) []int {
 	return posArr
 }
 
+func nodeInSlice(node NodeData, slice []NodeData) bool {
+	for _, n := range slice {
+		if node.Id == n.Id {
+			return true
+		}
+	}
+	return false
+}
+
+func GetPredecessor(n NodeData, nodeMap NodeMap) NodeData {
+	posArr := sortPositions(nodeMap)
+
+	var predecessor NodeData
+	for i, pos := range posArr {
+		if pos == n.Position {
+			predecessor = nodeMap[posArr[(i+len(posArr)-1)%len(posArr)]]
+		}
+	}
+	return predecessor
+}
+
+func GetSuccessor(n NodeData, nodeMap NodeMap) NodeData {
+	posArr := sortPositions(nodeMap)
+
+	var successor NodeData
+	for i, pos := range posArr {
+		if pos == n.Position {
+			successor = nodeMap[posArr[(i+len(posArr)+1)%len(posArr)]]
+		}
+	}
+	return successor
+}
+
 func (n *Node) GetResponsibleNodes(keyPos int) [REPLICATION_FACTOR]NodeData {
 	posArr := sortPositions(n.NodeMap)
 
@@ -63,6 +97,16 @@ func (n *Node) GetResponsibleNodes(keyPos int) [REPLICATION_FACTOR]NodeData {
 		responsibleNodes[i] = n.NodeMap[posArr[(firstNodePosIndex+i)%len(posArr)]]
 	}
 	return responsibleNodes
+}
+
+// Returns position of node, or -1 if node id is not in node map
+func (n *Node) GetPositionFromNodeMap(id int) int {
+	for _, nodeData := range n.NodeMap {
+		if nodeData.Id == id {
+			return nodeData.Position
+		}
+	}
+	return -1
 }
 
 /*
@@ -172,15 +216,14 @@ func KeyInRange(key string, start int, end int) bool {
 	return loopbackDelete || regularDelete
 }
 
-func DetermineSuccess(requestType RequestType, respChannel <-chan ChannelResp, coordMutex *sync.Mutex) (bool, map[int]APIResp) {
+func (n *Node) DetermineSuccess(successResps map[int]APIResp, failResps map[int]APIResp, requestType RequestType, nodes *[]NodeData, respChannel <-chan ChannelResp, coordMutex *sync.Mutex, wo WriteObject, key string) (bool, map[int]APIResp, map[int]APIResp) {
 	/*
 		As long as (REPLICATION_FACTOR - MIN_WRITE_SUCCESS + 1) nodes fail, we return an error to the client
 		It does not matter if 1 node has already successfully written to disk even if the entire operation fails
 		We let the client execute a read before retrying the write to handle that case
 		Inspired by DynamoDB: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Programming.Errors.html
 	*/
-	successResps := map[int]APIResp{}
-	failResps := map[int]APIResp{}
+	failureTimer := time.NewTimer(RESPONSE_TIMEOUT)
 	var wg sync.WaitGroup
 	var minSuccessCount int
 
@@ -189,52 +232,85 @@ func DetermineSuccess(requestType RequestType, respChannel <-chan ChannelResp, c
 	} else {
 		minSuccessCount = MIN_WRITE_SUCCESS
 	}
-
-	wg.Add(minSuccessCount)
+	// log.Printf("Added %d to wg %p", minSuccessCount - len(successResps) - len(failResps), &wg)
+	wg.Add(minSuccessCount - len(successResps))
 
 	go func(successes map[int]APIResp, fails map[int]APIResp) {
-	Loop:
 		for {
 			select {
 			case resp := <-respChannel:
 				coordMutex.Lock()
 				if resp.APIResp.Status == SUCCESS {
 					log.Printf("Successful operation for request type %v\n", requestType)
-					successes[resp.From] = resp.APIResp
+					successes[resp.From.Id] = resp.APIResp
 					if len(successes) <= minSuccessCount {
 						wg.Done()
 					}
-				} else {
-					fails[resp.From] = resp.APIResp
+				} else if resp.APIResp.Error != TIMEOUT_ERROR {
+					fails[resp.From.Id] = resp.APIResp
 					if len(fails) >= REPLICATION_FACTOR-minSuccessCount+1 {
 						// too many nodes have failed -- return error to client
-						if resp.APIResp.Status == SIMULATE_FAIL {
-							log.Printf("Simulate failure operation for request type %v\n", requestType)
-						} else {
-							log.Printf("Failed operation for request type %v\n", requestType)
-						}
+						log.Printf("Failed operation for request type %v\n", requestType)
+						// log.Printf("Subtracting %d for wg %p", minSuccessCount-len(successes), &wg)
 						for i := 0; i < (minSuccessCount - len(successes)); i++ {
 							wg.Done()
 						}
+						failureTimer.Stop()
 						defer coordMutex.Unlock()
-						break Loop
+						return
 					}
 				}
 				if (len(successes) + len(fails)) == REPLICATION_FACTOR {
 					// defer mutex unlock so that when we break out of this loop,
 					// mutex will still be unlocked once the function returns
+					failureTimer.Stop()
 					defer coordMutex.Unlock()
-					break Loop
+					return
 				}
 				coordMutex.Unlock()
+			case <-failureTimer.C:
+				// all successful responses should have been received by now -- stop listening for responses
+				// assume that no more responses will be received after this so we can close respChannel
+				log.Println("Failure timer reached -- some nodes failed without announcing")
+				remainingWgCount := minSuccessCount - len(successResps)
 
-				// TODO: ADD CHANNEL HERE TO DETECT TIMEOUT
-				// IF DID NOT HIT minSuccessCount, THEN WE SEND AN ERROR TO THE CLIENT
-				// IF minSuccessCount IS HIT BUT NODES TIMED OUT, SEND HINTED HANDOFF
+				var curKey string
+				contactReplicas := true
+				switch requestType {
+				case WRITE:
+					curKey = wo.Data.UserID
+				case READ:
+					curKey = key
+					if len(successResps) >= minSuccessCount {
+						contactReplicas = false
+					}
+				}
+				if contactReplicas {
+					// get nodes with unannounced failures
+					failedNodes := []NodeData{}
+					for _, curNode := range n.GetResponsibleNodes(HashMD5(curKey)) {
+						_, inSuccess := successResps[curNode.Id]
+						_, inFail := failResps[curNode.Id]
+						if !inSuccess && !inFail {
+							failedNodes = append(failedNodes, curNode)
+						}
+					}
 
-				// TODO: actually, we will need to determine how we are going to simulate failed nodes
-				// will we get an error while sending the API request like connection rejected?
-				// or will the nodes simply not respond?
+					handoffCh := make(chan ChannelResp, REPLICATION_FACTOR)
+
+					switch requestType {
+					case WRITE:
+						go n.sendHintedReplicas(wo, nodes, failedNodes, handoffCh)
+					case READ:
+						go n.getHintedReplicas(key, nodes, failedNodes, handoffCh)
+					}
+					n.DetermineSuccess(successResps, failResps, requestType, nodes, handoffCh, coordMutex, wo, key)
+					// unblock
+					for i := 0; i < remainingWgCount; i++ {
+						wg.Done()
+					}
+					return
+				}
 			}
 		}
 	}(successResps, failResps)
@@ -243,22 +319,9 @@ func DetermineSuccess(requestType RequestType, respChannel <-chan ChannelResp, c
 	coordMutex.Lock()
 	defer coordMutex.Unlock()
 	if len(successResps) >= minSuccessCount {
-		return true, successResps
+		return true, successResps, failResps
 	}
-	return false, failResps
-}
-
-/*
-checks if node has fail count > 0,
-if yes, decrement fail count return true.
-else, return false.
-*/
-func (n *Node) hasFailed() bool {
-	if n.FailCount > 0 {
-		n.FailCount--
-		return true
-	}
-	return false
+	return false, successResps, failResps
 }
 
 func OrderedIntArrayEqual(a, b []int) bool {
@@ -304,17 +367,10 @@ func UnorderedStringArrayEqual(a, b []string) bool {
 		}
 	}
 	return true
-
 }
 
-func (o *ClientCart) IsEqual(b ClientCart) bool {
-	if o.UserID != b.UserID {
-		return false
-	}
-	// if o.Items != b.Items {
-	// 	return false
-	// }
-	if !reflect.DeepEqual(o.VectorClock, b.VectorClock) {
+func (o ClientCart) IsEqual(b ClientCart) bool {
+	if !reflect.DeepEqual(o, b) {
 		return false
 	}
 	return true
