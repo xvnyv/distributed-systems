@@ -181,9 +181,9 @@ func (n *Node) handleWriteRequest(w http.ResponseWriter, r *http.Request) {
 		returnResp = failResps
 	}
 	for _, v := range returnResp {
-		if success {
-			v.Data = BadgerObject{UserID: c.UserID, Versions: []ClientCart{c}}
-		}
+		// if success {
+		// 	v.Data = BadgerObject{UserID: c.UserID, Versions: []ClientCart{c}}
+		// }
 		json.NewEncoder(w).Encode(v)
 		break
 	}

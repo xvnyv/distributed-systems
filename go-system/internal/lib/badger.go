@@ -36,7 +36,7 @@ func (n *Node) BadgerWrite(c ClientCart) (BadgerObject, error) {
 	toWrite := BadgerObject{}
 	userid := c.UserID
 	// if conflict, no need to read
-
+	conflict := false
 	lastWritten, err := n.BadgerRead(userid)
 	if err != nil {
 		if err.Error() == "Key not found" {
@@ -60,6 +60,10 @@ func (n *Node) BadgerWrite(c ClientCart) (BadgerObject, error) {
 		}
 		newVersions = append(newVersions, c)
 
+		if len(newVersions) > 1 {
+			conflict = true
+		}
+
 		lastWritten.Versions = newVersions
 		toWrite = lastWritten
 	}
@@ -79,7 +83,7 @@ func (n *Node) BadgerWrite(c ClientCart) (BadgerObject, error) {
 
 	// NOTE: returning badger object with one version DESPITE badger object possibly
 	// having MULTIPLE versions
-	return BadgerObject{UserID: userid, Versions: []ClientCart{c}}, nil
+	return BadgerObject{UserID: userid, Versions: []ClientCart{c}, Conflict: conflict}, nil
 }
 
 /**
