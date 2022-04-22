@@ -1,4 +1,4 @@
-module github.com/distributed-systems/go-system
+module github.com/distributed-systems
 
 go 1.17
 
