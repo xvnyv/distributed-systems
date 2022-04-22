@@ -109,7 +109,18 @@ export const SendPostRequest = async (
         });
         return;
       }
-
+      if (data.Data.Conflict) {
+        toastIdRef.current = toast({
+          title: "Warning",
+          status: "warning",
+          description:
+            "Multiple versions detected. Please read again before writing",
+          duration: 2000,
+          isClosable: true,
+          position: "top-left",
+        });
+        // return;
+      }
       toastIdRef.current = toast({
         title: "Saved",
         status: "success",

@@ -54,6 +54,7 @@ type ClientCart struct {
 type BadgerObject struct {
 	UserID   string
 	Versions []ClientCart
+	Conflict bool
 }
 
 type ItemObject struct {
