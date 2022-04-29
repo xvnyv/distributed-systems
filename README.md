@@ -30,7 +30,7 @@ Our implementation of a DynamoDB clone mainly consists of the following componen
 - **React E-commerce Cart Simulator(GUI)**
     Serving as a proof-of-concept, this react front-end aims to simulate a typical e-commerce cart service whereby clients can add, modify or remove items to and from their cart. This will serve as the interface to interact with the DynamoDB clone, apart from command line manipulation, through the NGINX load balancer using the ```coordinate_api```  and will provide a graphical output to responses to read or write operations through the use of toast messages. 
 <table align = "center"><tr><td>
-<img src = "./readmeImages/FrontEnd.jPG" >
+<img src = "./readmeImages/FrontEnd.JPG" >
 </td></tr></table>
 
 - **NGINX Load Balancer**
