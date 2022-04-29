@@ -1,12 +1,12 @@
 #### 50.041 Distributed Systems and Computing
 # Amazon DynamoDB Key-Value Store Clone
 
-**Group Members: Toh Kai Feng, Tan Xin Yi, Amrish Dev Sandhu, Goh Shao Cong Shawn, Lim Jun Wei.**
+**Group Members: [Toh Kai Feng](https://github.com/khaizon), [Tan Xin Yi](https://github.com/xvnyv), [Amrish Dev Sandhu](https://github.com/sazzyboy), [Goh Shao Cong Shawn](https://github.com/ShawnGoh), [Lim Jun Wei](https://github.com/junwei567)**
 
 
 
 ## Introduction
- With the goal of demonstrating our learning and understanding of core concepts covered in the 50.041 Distributed Systems and Computing course instructed by Professor Sudipta Chattopadhyay at SUTD, this project implementing a key-value distributed storage that is similar to Amazon's DynamoDB while emulating certain features that has contributed to the success of DynamoDB as a commercially available key-value store. Features that we will be implementing include Scalability through joining, Intermittent fault tolerance through hinted handoffs, High write availability through an always-write policy and data versioning control through vector clock implementation. 
+ With the goal of demonstrating our learning and understanding of core concepts covered in the [50.041 Distributed Systems and Computing](https://istd.sutd.edu.sg/undergraduate/courses/50041-distributed-systems-computing) course instructed by [Professor Sudipta Chattopadhyay](https://istd.sutd.edu.sg/people/faculty/sudipta-chattopadhyay) at SUTD, this project implementing a key-value distributed storage that is similar to Amazon's DynamoDB while emulating certain features that has contributed to the success of DynamoDB as a commercially available key-value store. Features that we will be implementing include **Scalability** through joining, **Intermittent fault tolerance** through hinted handoffs, **High write availability** through an always-write policy and **Data versioning control** through vector clock implementation. 
 
 
 ## Context
@@ -27,18 +27,17 @@ After our exploration of the various project topics, we are inspired to dive dee
 </p>
 
 Our implementation of a DynamoDB clone mainly consists of the following components arranged in the above configuration:
-- **React E-commerce Cart Simulator(GUI)** - 
+- **React E-commerce Cart Simulator(GUI)**
     Serving as a proof-of-concept, this react front-end aims to simulate a typical e-commerce cart service whereby clients can add, modify or remove items to and from their cart. This will serve as the interface to interact with the DynamoDB clone, apart from command line manipulation, through the NGINX load balancer using the ```coordinate_api```  and will provide a graphical output to responses to read or write operations through the use of toast messages. 
-    
-<p align = "center">
-<img src = "./readmeImages/FrontEnd.jpg">
-</p>
+<table align = "center"><tr><td>
+<img src = "readmeImages/FrontEnd.jpg" >
+</td></tr></table>
 
-- **NGINX Load Balancer** - 
+- **NGINX Load Balancer**
     Utilising Nginx, the load balancer acts as the front-facing exposed endpoint for the GUI and is responsible for distributing read and write requests to a random node as a coordinator within the ring structure which would handle the read and write request before contacting the responsible node to perform the read and write request. 
     
     
-- **Data Nodes** - 
+- **Data Nodes**
     Using the [BadgerDB](https://dgraph.io/docs/badger/) library which allows us to create a persistent store, the data nodes hold dual responsibilities as coordinator nodes and a normal node.
     - As a Coordinator node, the node is responsible for handling requests for the load balancer and  would identify the responsible storage nodes. Before handling write requests, the coordinator would update the data object’s vector clock before passing it to the responsible node.Lastly, the coordinator is also in charge of sending and retrieving hinted replicas.  
     - As a Normal node, it is responsible for reading and writing to its BadgerDB instance or storage. When it receives data objects with conflicting vector clocks, it would also append both versions to storage. Lastly, the node here is in charge of storing hinted replicas assigned by the coordinator and would  periodically attempt to handoff to the intended responsible node. 
