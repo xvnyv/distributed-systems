@@ -27,17 +27,18 @@ After our exploration of the various project topics, we are inspired to dive dee
 </p>
 
 Our implementation of a DynamoDB clone mainly consists of the following components arranged in the above configuration:
-- **React E-commerce Cart Simulator(GUI)**
+- **React E-commerce Cart Simulator(GUI)** - 
     Serving as a proof-of-concept, this react front-end aims to simulate a typical e-commerce cart service whereby clients can add, modify or remove items to and from their cart. This will serve as the interface to interact with the DynamoDB clone, apart from command line manipulation, through the NGINX load balancer using the ```coordinate_api```  and will provide a graphical output to responses to read or write operations through the use of toast messages. 
-<table align = "center"><tr><td>
-<img src = "./readmeImages/FrontEnd.JPG" >
-</td></tr></table>
+    
+<p align = "center">
+<img src = "./readmeImages/FrontEnd.jpg">
+</p>
 
-- **NGINX Load Balancer**
+- **NGINX Load Balancer** - 
     Utilising Nginx, the load balancer acts as the front-facing exposed endpoint for the GUI and is responsible for distributing read and write requests to a random node as a coordinator within the ring structure which would handle the read and write request before contacting the responsible node to perform the read and write request. 
     
     
-- **Data Nodes**
+- **Data Nodes** - 
     Using the [BadgerDB](https://dgraph.io/docs/badger/) library which allows us to create a persistent store, the data nodes hold dual responsibilities as coordinator nodes and a normal node.
     - As a Coordinator node, the node is responsible for handling requests for the load balancer and  would identify the responsible storage nodes. Before handling write requests, the coordinator would update the data object’s vector clock before passing it to the responsible node.Lastly, the coordinator is also in charge of sending and retrieving hinted replicas.  
     - As a Normal node, it is responsible for reading and writing to its BadgerDB instance or storage. When it receives data objects with conflicting vector clocks, it would also append both versions to storage. Lastly, the node here is in charge of storing hinted replicas assigned by the coordinator and would  periodically attempt to handoff to the intended responsible node. 
