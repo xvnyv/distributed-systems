@@ -40,11 +40,21 @@ var testData ClientCart = ClientCart{
 
 var keylst []string = make([]string, 0)
 
+func TestBadgers(t *testing.T) {
+	// <setup code>
+	testNode.OpenBadger()
+	t.Run("TestBadgerReadWriteDelete", TestBadgerReadWriteDelete)
+	t.Run("TestBadgerGetKeys", TestBadgerGetKeys)
+	t.Run("TestOverrideAppend", TestOverrideAppend)
+	testNode.CloseBadger()
+	// <tear-down code>
+}
+
 func TestBadgerReadWriteDelete(t *testing.T) {
 
 	_, err := testNode.BadgerWrite(testData)
 	if err != nil {
-		t.Fatal("Write Failed")
+		t.Fatal("Write Failed:", err)
 	}
 
 	newDataobject, err := testNode.BadgerRead(testData.UserID)
@@ -100,7 +110,7 @@ func TestBadgerGetKeys(t *testing.T) {
 
 }
 
-func TestOverwriteConflictClientCarts(t *testing.T) {
+func TestOverrideAppend(t *testing.T) {
 	type testItem struct {
 		c1       ClientCart
 		c2       ClientCart
