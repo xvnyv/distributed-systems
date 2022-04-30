@@ -1,16 +1,26 @@
 package lib
 
-import "fmt"
-
-const (
-	NUM_RING_POSITIONS int    = 100
-	REPLICATION_FACTOR int    = 3 // increase replication factor after base features are completed
-	MIN_READ_SUCCESS   int    = 2
-	MIN_WRITE_SUCCESS  int    = 2
-	BASE_URL           string = "http://127.0.0.1"
+import (
+	"fmt"
+	"time"
 )
 
-var TEMP_NODE_MAP NodeMap = NodeMap{
+const (
+	NUM_RING_POSITIONS      int           = 100
+	REPLICATION_FACTOR      int           = 3 // increase replication factor after base features are completed
+	MIN_READ_SUCCESS        int           = 2
+	MIN_WRITE_SUCCESS       int           = 2
+	BASE_URL                string        = "http://127.0.0.1"
+	LOAD_BALANCER_PORT      int           = 8080
+	RESPONSE_TIMEOUT        time.Duration = 3 * time.Second
+	HINTED_HANDOFF_INTERVAL time.Duration = 3 * time.Second
+	HANDOFF_TIMEOUT         time.Duration = 25 * time.Second
+	TIMEOUT_ERROR           string        = "Timeout"
+	NIL_HINT                int           = -1
+	DB_OPEN_RETIRES         int           = 3
+)
+
+var TEST_NODE_MAP NodeMap = NodeMap{
 	0: NodeData{
 		Id:       0,
 		Ip:       fmt.Sprintf("%s:%d", BASE_URL, 8000),

@@ -8,70 +8,97 @@ import (
 	badger "github.com/dgraph-io/badger/v3"
 )
 
-func (n *Node) BadgerWrite(o []ClientCart) error {
+var db *badger.DB
+
+func (n *Node) OpenBadger() {
 	opts := badger.DefaultOptions(fmt.Sprintf("tmp/%v/badger", n.Id))
 	opts.Logger = nil
+	opts.SyncWrites = true
 
-	db, err := badger.Open(opts)
-	if err != nil {
-		log.Printf("Badger Error: %v\n", err)
-		return err
+	openedDb, err := badger.Open(opts)
+	for i := 0; i < DB_OPEN_RETIRES && err != nil; i++ {
+		openedDb, err = badger.Open(opts)
 	}
-	defer db.Close()
-	// Your code here…
-	for _, v := range o {
-		err = db.Update(func(txn *badger.Txn) error {
-			//need convert DataObject to byte array
-			//forloop
-			if v.UserID == "" {
-				log.Println("No UserId. Object is:", v)
+	if err != nil {
+		log.Fatalf("Error opening DB: %s\n", err)
+	}
+	db = openedDb
+}
+
+func (n *Node) CloseBadger() {
+	if db != nil {
+		log.Println("Closing DB")
+		defer db.Close()
+	}
+}
+
+func (n *Node) BadgerWrite(c ClientCart) (BadgerObject, error) {
+	toWrite := BadgerObject{}
+	userid := c.UserID
+	// if conflict, no need to read
+	conflict := false
+	lastWritten, err := n.BadgerRead(userid)
+	if err != nil {
+		if err.Error() == "Key not found" {
+			toWrite = BadgerObject{UserID: userid, Versions: []ClientCart{c}}
+			fmt.Printf("Key not found, writing %v\n", toWrite)
+			//do nothing
+		} else {
+			return BadgerObject{}, err // Error, return empty client cart
+		}
+	} else {
+		//iterate through the versions, check whether can overwrite
+		newVersions := []ClientCart{}
+		for i := 0; i < len(lastWritten.Versions); i++ {
+			if VectorClockSmaller(lastWritten.Versions[i].VectorClock, c.VectorClock) {
+				// if current version is smaller than incoming version
+				// don't add to new array of versions
+				continue
 			}
-			dataObjectBytes, _ := json.Marshal(v)
-			err := txn.Set([]byte(v.UserID), dataObjectBytes)
-			if err != nil {
-				return err
-			}
-			return nil
-		})
+			//add to new array of versions
+			newVersions = append(newVersions, lastWritten.Versions[i])
+		}
+		newVersions = append(newVersions, c)
+
+		if len(newVersions) > 1 {
+			conflict = true
+		}
+
+		lastWritten.Versions = newVersions
+		toWrite = lastWritten
+	}
+
+	err = db.Update(func(txn *badger.Txn) error {
+		//need convert DataObject to byte array
+		dataObjectBytes, _ := json.Marshal(toWrite)
+		err := txn.Set([]byte(toWrite.UserID), dataObjectBytes)
 		if err != nil {
 			return err
 		}
+		return nil
+	})
+	if err != nil {
+		return BadgerObject{}, err
 	}
-	return nil
+
+	// NOTE: returning badger object with one version DESPITE badger object possibly
+	// having MULTIPLE versions
+	return BadgerObject{UserID: userid, Versions: []ClientCart{c}, Conflict: conflict}, nil
 }
 
 /**
 Returns empty DataObject if there is an error reading from the database with the provided key.
 */
-func (n *Node) BadgerRead(key string) (ClientCart, error) {
-	opts := badger.DefaultOptions(fmt.Sprintf("tmp/%v/badger", n.Id))
-	opts.Logger = nil
-
-	db, err := badger.Open(opts)
-	if err != nil {
-		log.Printf("Badger Error: %v\n", err)
-		return ClientCart{}, err
-	}
-	defer db.Close()
-	// Your code here…
-
-	res := ClientCart{}
-	err = db.View(func(txn *badger.Txn) error {
+func (n *Node) BadgerRead(key string) (BadgerObject, error) {
+	res := BadgerObject{}
+	err := db.View(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte(key))
 		if err != nil {
 			return err
 		}
-
-		// Alternatively, you could also use item.ValueCopy().
-		// valCopy, err := item.ValueCopy(nil)
-		// handle(err)
-		//
 		var valCopy []byte
 
 		err = item.Value(func(val []byte) error {
-			// This func with val would only be called if item.Value encounters no error.
-
-			// Copying or parsing val is valid.
 			valCopy = append([]byte{}, val...)
 
 			return nil
@@ -79,7 +106,6 @@ func (n *Node) BadgerRead(key string) (ClientCart, error) {
 		if err != nil {
 			return err
 		}
-
 		//convert valCopy to DataObject
 		err = json.Unmarshal(valCopy, &res)
 		return err
@@ -89,41 +115,23 @@ func (n *Node) BadgerRead(key string) (ClientCart, error) {
 }
 
 func (n *Node) BadgerDelete(keys []string) error {
-	opts := badger.DefaultOptions(fmt.Sprintf("tmp/%v/badger", n.Id))
-	opts.Logger = nil
-
-	db, err := badger.Open(opts)
-	if err != nil {
-		log.Printf("Badger Error: %v\n", err)
-		return err
-	}
-	defer db.Close()
-	// Your code here…
-	for _, v := range keys {
-		err = db.Update(func(txn *badger.Txn) error {
+	var err error
+	err = db.Update(func(txn *badger.Txn) error {
+		for _, v := range keys {
 			err := txn.Delete([]byte(v))
-			return err
-		})
-		if err != nil {
-			return err
+			if err != nil {
+				return err
+			}
 		}
-	}
-
+		return err
+	})
 	return err
 }
 
 func (n *Node) BadgerGetKeys() ([]string, error) {
-	opts := badger.DefaultOptions(fmt.Sprintf("tmp/%v/badger", n.Id))
-	opts.Logger = nil
-
-	db, err := badger.Open(opts)
-	if err != nil {
-		return []string{}, err
-	}
-	defer db.Close()
 	result := make([]string, 0)
 
-	err = db.View(func(txn *badger.Txn) error {
+	err := db.View(func(txn *badger.Txn) error {
 		opts := badger.DefaultIteratorOptions
 		opts.PrefetchValues = false
 		it := txn.NewIterator(opts)
@@ -136,4 +144,19 @@ func (n *Node) BadgerGetKeys() ([]string, error) {
 		return nil
 	})
 	return result, err
+}
+
+func (n *Node) BadgerMigrateWrite(data []BadgerObject) error {
+	err := db.Update(func(txn *badger.Txn) error {
+		for _, item := range data {
+			//need convert DataObject to byte array
+			dataObjectBytes, _ := json.Marshal(item)
+			err := txn.Set([]byte(item.UserID), dataObjectBytes)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	return err
 }

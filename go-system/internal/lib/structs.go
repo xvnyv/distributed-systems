@@ -1,5 +1,9 @@
 package lib
 
+import (
+	"sync"
+)
+
 type MessageType int
 
 type NodeData struct {
@@ -12,13 +16,15 @@ type NodeData struct {
 type NodeMap map[int]NodeData //int refers to position in the ring
 
 type Node struct {
-	Id           int
-	Ip           string
-	Port         int
-	Position     int
-	NodeMap      NodeMap
-	Successors   []int
-	Predecessors []int
+	Id            int
+	Ip            string
+	Port          int
+	Position      int
+	NodeMap       NodeMap
+	Successors    []int
+	Predecessors  []int
+	BadgerLock    *sync.Mutex
+	HintedStorage map[string]BadgerObject
 }
 
 type Message struct {
@@ -31,11 +37,24 @@ type Message struct {
 	itemObject map[int]ItemObject
 }
 
+type WriteObject struct {
+	Hint int // used to store node id for hinted handoff
+	Data ClientCart
+}
+
 //Domain Object
 type ClientCart struct {
 	UserID      string
 	Item        map[int]ItemObject
-	VectorClock []int
+	VectorClock map[int]int // {coordinatorId: verstion_number}
+	ClientId    string
+	Timestamp   int
+}
+
+type BadgerObject struct {
+	UserID   string
+	Versions []ClientCart
+	Conflict bool
 }
 
 type ItemObject struct {
@@ -47,14 +66,39 @@ type ItemObject struct {
 type APIResp struct {
 	//standard API response
 	Status STATUS_TYPE
-	Data   ClientCart //json
+	Data   BadgerObject //json
+	Error  string
+}
+
+type JoinResp struct {
+	Status STATUS_TYPE
+	Data   JoinOfferObject //json
+	Error  string
+}
+
+type JoinOfferObject struct {
+	Position int
+	NodeMap  NodeMap
+}
+
+type MigrateResp struct {
+	//standard API response
+	Status STATUS_TYPE
+	Data   []BadgerObject //json
 	Error  string
 }
 
 type ChannelResp struct {
-	From    int // node ID
+	From    NodeData
 	APIResp APIResp
 }
+
+type KeysetAction int
+
+const (
+	MIGRATE KeysetAction = iota
+	DELETE
+)
 
 type RequestType int
 
